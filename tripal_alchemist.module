@@ -1,0 +1,23 @@
+<?php
+
+/**
+ * implement hook menu
+ */
+
+function tripal_alchemist_menu() {
+  $admin_url_base = 'admin/tripal/extension/tripal_alchemist';
+
+  $items[$admin_url_base] = [
+    'title' => 'Tripal Alchemist',
+    'description' => t('Tripal Alchemist: Convert Tripal 3 Entities'),
+    'access arguments' => [' tripal alchemist'],
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['tripal_alchemist_converter_form'],
+    'file' => 'includes/tripal_alchemist_converter.form.inc',
+    'file_path' => drupal_get_path('module', 'tripal_alchemist'),
+
+  ];
+
+  return $items;
+
+}

@@ -1,0 +1,9 @@
+name = Tripal Alchemist
+description = This module provides an interface for converting entities from one bundle type to another.
+core = 7.x
+package = Tripal Extensions
+files[] = tripal_alchemist.module
+configuration = admin/tripal/extension/tripal_alchemist
+version=7.x-3.0
+dependencies[] = tripal
+
