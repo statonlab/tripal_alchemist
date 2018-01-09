@@ -1,9 +1,64 @@
 <?php
 
-function tripal_alchemist_check_base_tables($source_bundle, $destination_bundle){
+/**returns an array of all bundle objects.  Requires further processing to create menu items.
+ *
+ * @return array|bool
+ *
+ */
+function tripal_alchemist_get_all_bundles() {
 
+  $bundles = [];
 
+  // Get all bundle names to cycle through.
+  $all_bundles = db_select('tripal_bundle', 'tb')
+    ->fields('tb', ['name'])
+    ->execute()->fetchAll();
+
+  foreach ($all_bundles as $bundle_name) {
+    // Get the bundle object.
+    $bundle = tripal_load_bundle_entity(['name' => $bundle_name->name]);
+    if (!$bundle) {
+      tripal_report_error('tripal', TRIPAL_ERROR, "Unrecognized bundle name '%bundle'.",
+        ['%bundle' => $bundle_name]);
+      return FALSE;
+    }
+
+    array_push($bundles, $bundle);
+  }
+
+  return $bundles;
 }
+
+
+/**Get bundles that map to a particular source table
+ * @param $source_table
+ * @param $all_bundles_object
+ *
+ * @return array
+ */
+
+function tripal_alchemist_get_matching_bundles($source_table) {
+  $options = [];
+
+  $all_bundles_object = tripal_alchemist_get_all_bundles();
+
+  foreach ($all_bundles_object as $bundle) {
+    if ($bundle->data_table == $source_table) {
+      $options[$bundle->id] = $bundle->label;
+    }
+  }
+
+  return ($options);
+}
+
+
+/**Converts entities from one type to another based on the prop linker table
+ *
+ * @param $source_bundle
+ * @param $destination_bundle
+ * @param $descriminating_cvterm
+ * @param $descriminating_prop_value
+ */
 
 
 function tripal_alchemist_convert_entity($source_bundle, $destination_bundle, $descriminating_cvterm, $descriminating_prop_value) {
