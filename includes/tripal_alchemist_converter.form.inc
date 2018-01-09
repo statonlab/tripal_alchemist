@@ -18,6 +18,10 @@ function tripal_alchemist_converter_form($form, &$form_state) {
     $all_bundles_array[$bundle->id] = $bundle;
   }
 
+  $form['instructions'] = [
+    '#markup' => "<p>Welcome to Tripal Alchemist.  Instructions go here.</p><p>Please note that Tripal Alchemist will only convert <b>Tripal 3 Entities</b>.  Tripal 2 content types (nodes) must be migrated.</p>"
+  ];
+
   $form['source_bundle'] = [
     '#type' => 'select',
     '#title' => t('Source Bundle'),
@@ -70,11 +74,17 @@ function tripal_alchemist_converter_form($form, &$form_state) {
     '#description' => t('Destination bundle.  Your selected entities will be converted to Tripal Entities of this bundle type.'),
     '#options' => $matching_destination_bundles,
   ];
-  //Form to select prop CVterm
+
+  //NOTE: SHOULDNT WE ABLE TO AUTOMATICALLY KNOW THE CVTERM BECAUSE YOU DEFINED IT IN THE BUNDLE? IN THE STORAGE SETTINGS????!?!!?!?
 
 
-  //Form to select cvterm value
-
+//  //Form to select prop CVterm
+//
+//  $form['prop_type_select'] = [];
+//
+//  //Form to select cvterm value
+//
+//  $form['cvterm_value_select'] = [];
 
   return $form;
 }
