@@ -25,8 +25,8 @@ function tripal_alchemist_converter_form($form, &$form_state) {
   $form['source_bundle'] = [
     '#type' => 'select',
     '#title' => t('Source Bundle'),
-    '#description' => t('Source'),
-    "#empty_option" => t('- Select -'),
+    '#description' => t('The source bundle, which contains the entities you would like to transform.'),
+    '#empty_option' => t('- Select -'),
     '#options' => $bundle_options,
     '#default_value' => NULL,
     '#ajax' => [
@@ -37,21 +37,25 @@ function tripal_alchemist_converter_form($form, &$form_state) {
   ];
 
 
-  $form['div1'] = ['#markup' => '<div id="destination_bundle_wrapper">'];
+  $form['div1'] = [
+    '#type' => 'fieldset',
+    '#collapsible' => FALSE,
+  ];
+
+  $form['div1']['markup_1'] = ['#markup' => '<div id="destination_bundle_wrapper">'];
+
   $selected_base_table = isset($form_state['values']['source_bundle']) ? $form_state['values']['source_bundle'] : NULL;
 
-  //Create dropdown list of bundles for source that match that table
   if (!$selected_base_table) {
-
-    $form['instructions_no_select'] = [
+    $form['div1']['instructions_no_select'] = [
       '#type' => '#markup',
       '#markup' => '<p>To begin, select a Source Bundle above.</p>',
-
     ];
-
     return $form;
-
   }
+
+  //Create dropdown list of bundles for source that match that table
+
   $source_bundle = $all_bundles_array[$selected_base_table];
   $source_table = $source_bundle->data_table;
 
@@ -59,19 +63,20 @@ function tripal_alchemist_converter_form($form, &$form_state) {
   unset($matching_destination_bundles[$selected_base_table]);//remove the source bundle
 
   if (count($matching_destination_bundles) == 0) {
-    $form['instructions_no_matches'] = [
+    $form['div1']['instructions_no_matches'] = [
       '#markup' => "<p>Your selected source bundle is the only bundle using the base table $source_table.</p><p>Please select a different source bundle, or define a new bundle with the same base table.</p>",
     ];
 
     return $form;
 
-
   }
 
-  $form['destination_bundle'] = [
+  $form['div1']['destination_bundle'] = [
     '#type' => 'select',
     '#title' => t('Destination Bundle'),
     '#description' => t('Destination bundle.  Your selected entities will be converted to Tripal Entities of this bundle type.'),
+    '#default' => NULL,
+    '#empty_option' => t('- Select -'),
     '#options' => $matching_destination_bundles,
     '#ajax' => [
       'callback' => 'tripal_alchemist_destination_bundle_callback',
@@ -79,13 +84,20 @@ function tripal_alchemist_converter_form($form, &$form_state) {
     ],
   ];
 
-  $form['div2'] = ['#markup' => '<div id="report_on_migrations_wrapper"> </div>'];
+  $form['div1close'] = ['#type' => 'markup', '#markup' => '</div>'];
 
+
+  $form['div2'] = [
+    '#type' => 'fieldset',
+    '#collapsible' => FALSE,
+  ];
+
+  $form['div2']['markup_2'] = ['#markup' => '<div id="report_on_migrations_wrapper">'];
 
   $selected_destination = isset($form_state['values']['destination_bundle']) ? $form_state['values']['destination_bundle'] : NULL;
 
   if (!$selected_destination) {
-    $form['need_destination'] = [
+    $form['div2']['need_destination'] = [
       '#markup' => "<p>Please select a destination bundle</p>",
     ];
 
@@ -93,33 +105,33 @@ function tripal_alchemist_converter_form($form, &$form_state) {
   }
 
 
+  dpm($selected_destination);
+
   $destination_bundle = $all_bundles_array[$selected_destination];
-
-  $headers = [];
-  $rows = [];
-
-  $table = [
-    'header' => $headers,
-    'rows' => $rows,
-  ];
 
   $table = tripal_alchemist_build_transaction_table($source_bundle, $destination_bundle);
 
-  $markup = theme_table($table);
+  dpm("here is table");
+  dpm($table);
 
-  $form['transaction_summary'] = [
+  $markup = '<h3>Qualifying Entities</h3><p>Entities from the source bundle that meet the Destination bundle storage criteria are listed below.</p><p><b>ALL</b> of the below entities will be transformed into the destination entity bundle type.  Future versions of Tripal Alchemist will allow transforming select entities or overwriting properties.</p>';
+
+  if (!$table) {
+$form['kill'] = ['#markup' =>'<p>No qualifying entries.  Please pick another destination table.</p>' ];
+
+return $form;
+  }
+ // $markup .= theme_table($table);
+
+  dpm("here");
+
+  $form['div2']['transaction_summary'] = [
     '#type' => 'markup',
     '#markup' => $markup,
   ];
 
 
-  //  type_linker_table (String, 12 characters ) analysisprop
-  //type_column (String, 7 characters ) type_id
-  //type_id (String, 4 characters ) 2864
-  //type_value (String, 17 characters ) interpro_analysis
-
-
-  $form['div1close'] = ['#markup' => '</div>'];
+  $form['div2close'] = ['#type' => 'markup', '#markup' => '</div>'];
 
   $form['Submit'] = [
     '#type' => 'submit',
@@ -143,8 +155,66 @@ function tripal_alchemist_destination_bundle_callback($form) {
   return $form['div2'];
 }
 
+
+/**
+ * Builds a table to display the entities that will be converted given the source and destination bundle.
+ *
+ * @param $source_bundle
+ * @param $destination_bundle
+ *
+ * @return array|null
+ */
 function tripal_alchemist_build_transaction_table($source_bundle, $destination_bundle) {
 
+  // what we want to do is a) Pull all the **source**  bundle entities
+  // and look at how many of those qualify for the destination bundle.
+  $source_table = "chado." . $source_bundle->data_table;//CBT  CHADO BASE TABLE
+  $source_entity_table = "public.chado_" . $source_bundle->name; //SET SOURCE ENTITY TABLE
 
+  $type_linker_table = "chado." . $destination_bundle->type_linker_table; //CLT CHADO LINKER TABLE
+  $type_column = $destination_bundle->type_column;
+  $type_id = $destination_bundle->type_id;
+  $type_value = $destination_bundle->type_value;
+
+  //TODO:  joining on the data_table_id is risky.  This works for analysis but which ones does it fail on?
+  //TODO:  CBT.name: is this fair?  What can i get thats relaiably human readable?
+
+  $sql = "SELECT SET.record_id, SET.entity_id, CBT.name  FROM {" . db_escape_table($source_table) . "} CBT 
+          INNER JOIN {" . db_escape_table($source_entity_table) . "} SET ON SET.record_id = CBT." . $source_bundle->data_table . "_id
+          INNER JOIN {" . db_escape_table($type_linker_table) . "} CLT ON CBT." . $source_bundle->data_table . "_id = CLT." . $source_bundle->data_table . "_id 
+          WHERE CLT." . $type_column . " = :type_id
+          AND CLT.value = :type_value 
+          ";
+  dpm($sql);
+
+  $results = db_query($sql, [
+    ":type_id" => $type_id,
+    ":type_value" => $type_value,
+  ]);
+
+  $rows = [];
+
+  foreach ($results as $result) {
+    $entry = [];
+    dpm($result);
+    $entry = [
+      'record_id' => $result->record_id,
+      'entity_id' => $result->entity_id,
+    ];
+    array_push($rows, $entry);
+  }
+
+  if (!$rows){
+    return null;
+  }
+
+  $headers = ['record ID', 'entity ID', 'Name'];
+
+  $table = [
+    'header' => $headers,
+    'rows' => $rows,
+  ];
+
+  return($table);
 }
 
