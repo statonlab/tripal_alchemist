@@ -37,12 +37,26 @@ function tripal_alchemist_converter_form($form, &$form_state) {
   ];
 
 
+  //create the divs for AJAX rebuilding.  One for the destination bundle select, one for the transaction overview
   $form['div1'] = [
     '#type' => 'fieldset',
     '#collapsible' => FALSE,
+    '#prefix' => '<div id="destination_bundle_wrapper">',
+    '#suffix' => '</div>',
   ];
 
-  $form['div1']['markup_1'] = ['#markup' => '<div id="destination_bundle_wrapper">'];
+  $form['div2'] = [
+    '#type' => 'fieldset',
+    '#collapsible' => FALSE,
+    '#prefix' => '<div id="report_on_migrations_wrapper">',
+    '#suffix' => '</div>',
+  ];
+
+
+  //  $form['div1']['markup_1'] = ['#markup' => '<div id="destination_bundle_wrapper">'];
+
+  // $form['div2']['markup_2'] = ['#markup' => '<div id="report_on_migrations_wrapper">'];
+
 
   $selected_base_table = isset($form_state['values']['source_bundle']) ? $form_state['values']['source_bundle'] : NULL;
 
@@ -84,15 +98,8 @@ function tripal_alchemist_converter_form($form, &$form_state) {
     ],
   ];
 
-  $form['div1close'] = ['#type' => 'markup', '#markup' => '</div>'];
+  //  $form['div1close'] = ['#type' => 'markup', '#markup' => '</div>'];
 
-
-  $form['div2'] = [
-    '#type' => 'fieldset',
-    '#collapsible' => FALSE,
-  ];
-
-  $form['div2']['markup_2'] = ['#markup' => '<div id="report_on_migrations_wrapper">'];
 
   $selected_destination = isset($form_state['values']['destination_bundle']) ? $form_state['values']['destination_bundle'] : NULL;
 
@@ -105,23 +112,18 @@ function tripal_alchemist_converter_form($form, &$form_state) {
   }
 
 
-  dpm($selected_destination);
-
   $destination_bundle = $all_bundles_array[$selected_destination];
 
   $table = tripal_alchemist_build_transaction_table($source_bundle, $destination_bundle);
 
-  dpm("here is table");
-  dpm($table);
-
   $markup = '<h3>Qualifying Entities</h3><p>Entities from the source bundle that meet the Destination bundle storage criteria are listed below.</p><p><b>ALL</b> of the below entities will be transformed into the destination entity bundle type.  Future versions of Tripal Alchemist will allow transforming select entities or overwriting properties.</p>';
 
   if (!$table) {
-$form['kill'] = ['#markup' =>'<p>No qualifying entries.  Please pick another destination table.</p>' ];
+    $form['kill'] = ['#markup' => '<p>No qualifying entries.  Please pick another destination table.</p>'];
 
-return $form;
+    return $form;
   }
- // $markup .= theme_table($table);
+  // $markup .= theme_table($table);
 
   dpm("here");
 
@@ -131,7 +133,7 @@ return $form;
   ];
 
 
-  $form['div2close'] = ['#type' => 'markup', '#markup' => '</div>'];
+  // $form['div2close'] = ['#type' => 'markup', '#markup' => '</div>'];
 
   $form['Submit'] = [
     '#type' => 'submit',
@@ -157,7 +159,8 @@ function tripal_alchemist_destination_bundle_callback($form) {
 
 
 /**
- * Builds a table to display the entities that will be converted given the source and destination bundle.
+ * Builds a table to display the entities that will be converted given the
+ * source and destination bundle.
  *
  * @param $source_bundle
  * @param $destination_bundle
@@ -204,8 +207,8 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
     array_push($rows, $entry);
   }
 
-  if (!$rows){
-    return null;
+  if (!$rows) {
+    return NULL;
   }
 
   $headers = ['record ID', 'entity ID', 'Name'];
@@ -215,6 +218,6 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
     'rows' => $rows,
   ];
 
-  return($table);
+  return ($table);
 }
 
