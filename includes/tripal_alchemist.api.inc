@@ -31,6 +31,7 @@ function tripal_alchemist_get_all_bundles() {
 
 
 /**Get bundles that map to a particular source table
+ *
  * @param $source_table
  * @param $all_bundles_object
  *
@@ -44,85 +45,202 @@ function tripal_alchemist_get_matching_bundles($source_table) {
 
   foreach ($all_bundles_object as $bundle) {
     if ($bundle->data_table == $source_table) {
+      //TODO Count how many elligible entities here
       $options[$bundle->id] = $bundle->label;
     }
   }
-
   return ($options);
 }
 
+//This call is deprecated and refactored by tripal_alchemist_convert_all_entities
 
-/**Converts entities from one type to another based on the prop linker table
- *
- * @param $source_bundle
- * @param $destination_bundle
- * @param $descriminating_cvterm
- * @param $descriminating_prop_value
- */
+///**Converts entities from one type to another based on the prop linker table
+// *
+// * @param $source_bundle
+// * @param $destination_bundle
+// * @param $descriminating_cvterm
+// * @param $descriminating_prop_value
+// */
+//
+//
+//function tripal_alchemist_convert_entity($source_bundle, $destination_bundle, $descriminating_cvterm, $descriminating_prop_value) {
+//
+//
+//  $descriminating_type_cvterm_id = $descriminating_cvterm->cvterm_id;
+//
+//  $source_bundle_table = "public.chado_" . $source_bundle->name;
+//
+//  $destination_term = $destination_bundle->term_id;
+//  $destination_table = "public.chado_" . $destination_bundle->name;
+//
+//  print ("\nconverting " . $source_bundle_table . " to " . $destination_table . "\n");
+//
+//  $chado_base_table = "chado." . $source_bundle->data_table;
+//  $chado_prop_table = $chado_base_table . "prop";
+//
+//  //  Copy the plain analysis entities to the new bundle type
+//
+//  $sql = "INSERT INTO " . $destination_table . " (entity_id, record_id)
+//SELECT AB.entity_id AS entity_id, A.analysis_id AS record_id FROM " . $chado_base_table . "  A
+//INNER JOIN  " . $chado_prop_table . " AP  ON A.analysis_id = AP.analysis_id
+//INNER JOIN chado.cvterm CVT ON AP.type_id = CVT.cvterm_id
+//INNER JOIN  " . $source_bundle_table . " AB ON A.analysis_id = AB.record_id
+//WHERE CVT.cvterm_id = :cvterm_id
+//AND AP.value = :descrim_prop_value";
+//
+//  $results = db_query($sql, [
+//    ":cvterm_id" => $descriminating_type_cvterm_id,
+//    ":descrim_prop_value" => $descriminating_prop_value,
+//  ]);
+//
+//  //Update the tripal_entity table
+//
+//  $sql = "UPDATE public.tripal_entity AS TE SET bundle = :destination_bundle, term_id = :destination_term
+//WHERE TE.id  IN (SELECT AB.entity_id AS entity_id FROM chado.analysis A
+//INNER JOIN " . $chado_prop_table . " AP  ON A.analysis_id = AP.analysis_id
+//INNER JOIN chado.cvterm CVT ON AP.type_id = CVT.cvterm_id
+//INNER JOIN  " . $source_bundle_table . " AB ON A.analysis_id = AB.record_id
+//WHERE CVT.cvterm_id = :cvterm_id
+//AND AP.value = :descrim_prop_value )";
+//
+//  $params = [
+//    ":cvterm_id" => $descriminating_type_cvterm_id,
+//    ":descrim_prop_value" => $descriminating_prop_value,
+//    ':destination_term' => $destination_term,
+//    ":destination_bundle" => $destination_bundle->name,
+//  ];
+//
+//  $results = db_query($sql, $params);
+//
+//  // Delete the old entities, but only if they are present in both the destination table
+//  $sql = "DELETE  FROM " . $source_bundle_table . " AB
+//WHERE AB.record_id IN
+//(SELECT A.analysis_id AS record_id
+//FROM chado.analysis A
+//INNER JOIN " . $chado_prop_table . " AP  ON A.analysis_id = AP.analysis_id
+//INNER JOIN chado.cvterm CVT ON AP.type_id = CVT.cvterm_id
+//INNER JOIN " . $destination_table . " AS DT ON AB.record_id = DT.record_id
+//WHERE CVT.cvterm_id = :cvterm_id
+//AND AP.value = :descrim_prop_value)";
+//
+//  $results = db_query($sql, [
+//    ":cvterm_id" => $descriminating_type_cvterm_id,
+//    ":descrim_prop_value" => $descriminating_prop_value,
+//  ]);
+//}
+
+function tripal_alchemist_convert_all_entities($args) {
+  var_dump($args);
+
+  $source_bundle = $args['source_bundle'];
+  $destination_bundle = $args['destination_bundle'];
+
+  var_dump($source_bundle);
+  var_dump($destination_bundle);
+
+  if (!$source_bundle || !$destination_bundle) {
+    tripal_set_message("Error: Destination and source bundle not provided.  Cannot convert entities without source and destination bundles.", TRIPAL_ERROR);
+  }
+
+  $descriminating_type_cvterm_id = $destination_bundle->type_id;
+  $descriminating_prop_value = $destination_bundle->type_value;
+  $type_column = $destination_bundle->type_column;
+
+  $source_bundle_table = "public.chado_" . $source_bundle->name;
+
+  $destination_term = $destination_bundle->term_id;
+  $destination_table = "public.chado_" . $destination_bundle->name;
+
+  $chado_base_table = "chado." . $source_bundle->data_table;
+  $chado_prop_table = $chado_base_table . "prop";
+
+  //TODO:  add any hard-coded exceptions here since we guess the primary record column
+  $base_record_column = $source_bundle->data_table . "_id";
 
 
-function tripal_alchemist_convert_entity($source_bundle, $destination_bundle, $descriminating_cvterm, $descriminating_prop_value) {
+  //db_escape_string wont work, not in drupal 7.
+  //https://api.drupal.org/api/drupal/includes!database!database.inc/function/db_escape_field/7.x
+  //Need to use query builder instead
+  //on conflict will ignore duplicate insert attempts from, say, migrating 2x and resulting in duplicate id's
 
 
-$descriminating_type_cvterm_id = $descriminating_cvterm->cvterm_id;
-
-$source_bundle_table = "public.chado_" . $source_bundle->name;
-
-$destination_term = $destination_bundle->term_id;
-$destination_table = "public.chado_" . $destination_bundle->name;
-
-print ("\nconverting " . $source_bundle_table . " to " . $destination_table . "\n");
-
-$chado_base_table = "chado." . $source_bundle->data_table;
-$chado_prop_table = $chado_base_table . "prop";
-
-//  Copy the plain analysis entities to the new bundle type
-
-$sql = "INSERT INTO " . $destination_table . " (entity_id, record_id)
-SELECT AB.entity_id AS entity_id, A.analysis_id AS record_id FROM " . $chado_base_table . "  A
-INNER JOIN  " . $chado_prop_table . " AP  ON A.analysis_id = AP.analysis_id
-INNER JOIN chado.cvterm CVT ON AP.type_id = CVT.cvterm_id
-INNER JOIN  " . $source_bundle_table . " AB ON A.analysis_id = AB.record_id
+  //copy the entity over from source to destination
+  $sql = "INSERT INTO " . $destination_table . " (entity_id, record_id)
+SELECT AB.entity_id AS entity_id, AB.record_id AS record_id FROM " . $chado_base_table . "  A
+INNER JOIN  " . $chado_prop_table . " AP  ON A." . db_escape_field($base_record_column) . " = AP. " . ($base_record_column) . "
+INNER JOIN chado.cvterm CVT ON AP." . ($type_column) . " = CVT.cvterm_id
+INNER JOIN  " . $source_bundle_table . " AB ON A." . ($base_record_column) . " = AB.record_id
 WHERE CVT.cvterm_id = :cvterm_id
-AND AP.value = :descrim_prop_value";
+AND AP.value = :descrim_prop_value
+ON CONFLICT DO NOTHING;
+";
 
-$results = db_query($sql, [
-":cvterm_id" => $descriminating_type_cvterm_id,
-":descrim_prop_value" => $descriminating_prop_value,
-]);
+  $results = db_query($sql, [
+    ":cvterm_id" => $descriminating_type_cvterm_id,
+    ":descrim_prop_value" => $descriminating_prop_value,
+  ]);
 
-//Update the tripal_entity table
+  //Update the tripal_entity table
 
-$sql = "UPDATE public.tripal_entity AS TE SET bundle = :destination_bundle, term_id = :destination_term
-WHERE TE.id  IN (SELECT AB.entity_id AS entity_id FROM chado.analysis A
-INNER JOIN " . $chado_prop_table . " AP  ON A.analysis_id = AP.analysis_id
-INNER JOIN chado.cvterm CVT ON AP.type_id = CVT.cvterm_id
-INNER JOIN  " . $source_bundle_table . " AB ON A.analysis_id = AB.record_id
+  $sql = "UPDATE public.tripal_entity AS TE SET bundle = :destination_bundle, term_id = :destination_term
+WHERE TE.id  IN (SELECT AB.entity_id AS entity_id FROM " . $chado_base_table . " A
+INNER JOIN  " . $chado_prop_table . " AP  ON A." . db_escape_field($base_record_column) . " = AP. " . db_escape_field($base_record_column) . "
+INNER JOIN chado.cvterm CVT ON AP." . db_escape_field($type_column) . " = CVT.cvterm_id
+INNER JOIN  " . $source_bundle_table . " AB ON A." . db_escape_field($base_record_column) . " = AB.record_id
 WHERE CVT.cvterm_id = :cvterm_id
 AND AP.value = :descrim_prop_value )";
 
-$params = [
-":cvterm_id" => $descriminating_type_cvterm_id,
-":descrim_prop_value" => $descriminating_prop_value,
-':destination_term' => $destination_term,
-":destination_bundle" => $destination_bundle->name,
-];
+  $params = [
+    ":cvterm_id" => $descriminating_type_cvterm_id,
+    ":descrim_prop_value" => $descriminating_prop_value,
+    ':destination_term' => $destination_term,
+    ":destination_bundle" => $destination_bundle->name,
+  ];
 
-$results = db_query($sql, $params);
+  $results = db_query($sql, $params);
 
-// Delete the old entities, but only if they are present in both the destination table
-$sql = "DELETE  FROM " . $source_bundle_table . " AB
+  // Delete the old entities, but only if they are present in the destination table
+  $sql = "DELETE FROM " . $source_bundle_table . " AB
 WHERE AB.record_id IN
 (SELECT A.analysis_id AS record_id
-FROM chado.analysis A
-INNER JOIN " . $chado_prop_table . " AP  ON A.analysis_id = AP.analysis_id
+FROM " . $chado_base_table . " A
+INNER JOIN " . $chado_prop_table . " AP ON  A." . db_escape_field($base_record_column) . " = AP. " . db_escape_field($base_record_column) . "
 INNER JOIN chado.cvterm CVT ON AP.type_id = CVT.cvterm_id
 INNER JOIN " . $destination_table . " AS DT ON AB.record_id = DT.record_id
 WHERE CVT.cvterm_id = :cvterm_id
 AND AP.value = :descrim_prop_value)";
 
-$results = db_query($sql, [
-":cvterm_id" => $descriminating_type_cvterm_id,
-":descrim_prop_value" => $descriminating_prop_value,
-]);
+  $results = db_query($sql, [
+    ":cvterm_id" => $descriminating_type_cvterm_id,
+    ":descrim_prop_value" => $descriminating_prop_value,
+  ]);
+}
+
+
+/**
+ * Given a bundle object, count the number of entries for that bundle.
+ *
+ * @param $bundle
+ *
+ * @return mixed
+ */
+
+function tripal_alchemist_fetch_current_bundle_entities($bundle) {
+
+  $sql = "SELECT COUNT(*) FROM public.chado_" . $bundle->name;
+  $results = db_query($sql)->fetchObject();
+  return ($results->count);
+}
+
+
+function tripal_alchemist_fetch_elligible_bundle_entities() {
+
+}
+
+function function_tripal_alchemist_get_bundle($bundle_id) {
+
+
+  $query = "SELECT TB.name, TB.label FROM public.tripal_bundle TB WHERE TB.id = :bundle_id";
+  $result = db_query($query, [':bundle_id' => $bundle_id])->fetchObject();
+  return $result;
 }
