@@ -13,5 +13,5 @@ This module is under active development and is not yet released.
 * Run **Transmute**.
 * You're done!
 
->![The Tripal Alchemist Transmutation form](docs/img/alchemist_screenshot.png)
+>![The Tripal Alchemist Transmutation form](docs/img/tripal_alchemist_screen_1.png)
 > The Tripal Alchemist Transmutation form.  If any entities qualify for your new bundle type from the selected bundle type, they will appear in the table at the bottom of the form.
