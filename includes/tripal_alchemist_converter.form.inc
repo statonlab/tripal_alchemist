@@ -149,9 +149,24 @@ function tripal_alchemist_converter_form($form, &$form_state) {
 
 
 function tripal_alchemist_converter_form_submit($form, &$form_state) {
-$source_bundle_id = $form_state['values']['source_bundle'];
+  global $user;
+
+  $source_bundle_id = $form_state['values']['source_bundle'];
   $destination_bundle_id = $form_state['values']['destination_bundle'];
 
+
+  $source_bundle = tripal_load_bundle_entity(['id' => $source_bundle_id]);
+  $destination_bundle = tripal_load_bundle_entity(['id' => $destination_bundle_id]);
+
+  $job_args = [
+    "source_bundle" => $source_bundle,
+    "destination_bundle" => $destination_bundle,
+  ];
+
+  // tripal_add_job("Alchemist transmute:" . $source_bundle->label . "to " . $destination_bundle->label, 'tripal_alchemist', 'tripal_alchemist_convert_all_entities', $job_args, $user->uid, 10);
+
+  tripal_set_message("Transmutation successful!", TRIPAL_INFO);
+  tripal_alchemist_convert_all_entities($job_args);
 }
 
 
