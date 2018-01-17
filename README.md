@@ -1,6 +1,8 @@
-Tripal alchemist allows you to **transmute** (convert) entities from one type to another.
+Tripal Alchemist allows you to **transmute** (convert) entities from one type to another.
 
-Tripal 3 provides migrations for most base content types.  Some content types (namely Analysis) convert all analysis nodes to the analysis bundle.  This is not great if you make heavy use of analysis submodules and node types: analysis_expression, analysis_unigene, etc.  You also might decide later down the road that you want to redefine some of your `mrna` features as `mrna_contig`, for example.
+Tripal 3 provides migrations for most base content types.  Some content types (namely Analysis) convert all nodes to a single bundle type.  This is not great if you make heavy use of submodules that define their own node type: in the case of analysis, this includes analysis_expression, analysis_unigene, etc.  You also might decide later down the road that you want to redefine some of your `mrna` features as `mrna_contig`, for example.
+
+In both cases, Tripal Alchemist provides a simple interface to easily convert entities from one bundle to another, provided that the destination bundle exists, has the same base table as the source bundle, and the destination bundle was defined with the `type column` and `property value` properly set.
 
 This module is under active development and is not yet released.
 
