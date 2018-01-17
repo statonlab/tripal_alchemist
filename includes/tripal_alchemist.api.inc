@@ -45,7 +45,7 @@ function tripal_alchemist_get_matching_bundles($source_table) {
 
   foreach ($all_bundles_object as $bundle) {
     if ($bundle->data_table == $source_table) {
-      //TODO Count how many elligible entities here
+      //TODO Count how many eligible entities here
       $options[$bundle->id] = $bundle->label;
     }
   }
@@ -163,7 +163,6 @@ function tripal_alchemist_convert_all_entities($args) {
   //Need to use query builder instead
   //on conflict will ignore duplicate insert attempts from, say, migrating 2x and resulting in duplicate id's
 
-
   //copy the entity over from source to destination
   $sql = "INSERT INTO " . $destination_table . " (entity_id, record_id)
 SELECT AB.entity_id AS entity_id, AB.record_id AS record_id FROM " . $chado_base_table . "  A
@@ -171,9 +170,10 @@ INNER JOIN  " . $chado_prop_table . " AP  ON A." . db_escape_field($base_record_
 INNER JOIN chado.cvterm CVT ON AP." . ($type_column) . " = CVT.cvterm_id
 INNER JOIN  " . $source_bundle_table . " AB ON A." . ($base_record_column) . " = AB.record_id
 WHERE CVT.cvterm_id = :cvterm_id
-AND AP.value = :descrim_prop_value
-ON CONFLICT DO NOTHING;
-";
+AND AP.value = :descrim_prop_value";
+
+  //removed: ON CONFLICT DO NOTHING; for older versions of postgres
+
 
   $results = db_query($sql, [
     ":cvterm_id" => $descriminating_type_cvterm_id,
