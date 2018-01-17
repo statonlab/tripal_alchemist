@@ -19,7 +19,9 @@ function tripal_alchemist_converter_form($form, &$form_state) {
   }
 
   $form['instructions'] = [
-    '#markup' => "<p>Welcome to Tripal Alchemist. This module is designed to convert Tripal Entities from one type to another.</p><p>Please note that Tripal Alchemist will only convert <b>Tripal 3 Entities</b>.  Tripal 2 content types (nodes) must be migrated.</p>",
+    '#markup' => '<p>Welcome to Tripal Alchemist. This module is designed to convert Tripal Entities from one type to another.  Your destination bundle must already exist before transmuting.</p><p>Please note that Tripal Alchemist will only convert <b>Tripal 3 Entities</b>.  Tripal 2 content types (nodes) must be migrated.</p>
+        <p>Full documentation of this module is available on <a href = "https://github.com/statonlab/tripal_alchemist/">the projects Github page.</a></p>
+',
   ];
 
   $form['source_bundle'] = [
@@ -52,33 +54,41 @@ function tripal_alchemist_converter_form($form, &$form_state) {
     '#suffix' => '</div>',
   ];
 
-
-  //  $form['div1']['markup_1'] = ['#markup' => '<div id="destination_bundle_wrapper">'];
-
-  // $form['div2']['markup_2'] = ['#markup' => '<div id="report_on_migrations_wrapper">'];
-
-
   $selected_base_table = isset($form_state['values']['source_bundle']) ? $form_state['values']['source_bundle'] : NULL;
 
   if (!$selected_base_table) {
     $form['div1']['instructions_no_select'] = [
-      '#type' => '#markup',
-      '#markup' => '<p>To begin, select a Source Bundle above.</p>',
+      '#markup' => '<h2>Destination Bundle</h2><p>First, select a <b>Source Bundle</b> above.  You will then be able to choose a destination bundle from al bundles sharing a base table.</p>',
     ];
     return $form;
   }
 
-  //Create dropdown list of bundles for source that match that table
 
   $source_bundle = $all_bundles_array[$selected_base_table];
   $source_table = $source_bundle->data_table;
+
+  //How many records here?
+
+  $source_count = tripal_alchemist_fetch_current_bundle_entities($source_bundle);
+
+
+  if (!$source_count) {
+    $form['div1']['feedback'] = [
+      '#markup' => "<p>Your selected source bundle <b>$source_bundle->label</b> has <b>no entities</b> in the database.  You must populate the source bundle first, either by creating content or migrating Tripal 2 nodes.</p>",
+    ];
+  }
+  $form['div1']['feedback'] = [
+    '#markup' => "<p>There are  <b>$source_count</b> records in the $source_bundle->label bundle.</p>",
+  ];
+
+  //Create dropdown list of bundles for source that match that table
 
   $matching_destination_bundles = tripal_alchemist_get_matching_bundles($source_table);
   unset($matching_destination_bundles[$selected_base_table]);//remove the source bundle
 
   if (count($matching_destination_bundles) == 0) {
     $form['div1']['instructions_no_matches'] = [
-      '#markup' => "<p>Your selected source bundle is the only bundle using the base table $source_table.</p><p>Please select a different source bundle, or define a new bundle with the same base table.</p>",
+      '#markup' => "<p>Your selected source bundle is the only bundle using the base table <b>$source_table.</b></p><p>Please select a different source bundle, or define a new bundle with the same base table to serve as your destination bundle.</p>",
     ];
 
     return $form;
@@ -98,8 +108,6 @@ function tripal_alchemist_converter_form($form, &$form_state) {
     ],
   ];
 
-  //  $form['div1close'] = ['#type' => 'markup', '#markup' => '</div>'];
-
 
   $selected_destination = isset($form_state['values']['destination_bundle']) ? $form_state['values']['destination_bundle'] : NULL;
 
@@ -107,25 +115,23 @@ function tripal_alchemist_converter_form($form, &$form_state) {
     $form['div2']['need_destination'] = [
       '#markup' => "<p>Please select a destination bundle</p>",
     ];
-
     return $form;
   }
-
 
   $destination_bundle = $all_bundles_array[$selected_destination];
 
   $table = tripal_alchemist_build_transaction_table($source_bundle, $destination_bundle);
 
-  $markup = '<h3>Qualifying Entities</h3><p>Entities from the source bundle that meet the Destination bundle storage criteria are listed below.</p><p><b>ALL</b> of the below entities will be transformed into the destination entity bundle type.  Future versions of Tripal Alchemist will allow transforming select entities or overwriting properties.</p>';
 
   if (!$table) {
-    $form['kill'] = ['#markup' => '<p>No qualifying entries.  Please pick another destination table.</p>'];
+    $form['div2']['kill'] = ['#markup' => '<p>No qualifying entries.  Please pick another source or destination table.</p>'];
 
     return $form;
   }
-  // $markup .= theme_table($table);
 
-  dpm("here");
+  $markup = '<h3>Qualifying Entities</h3><p>Entities from the source bundle that meet the Destination bundle storage criteria are listed below.</p><p><b>ALL</b> of the below entities will be transformed into the destination entity bundle type.  Future versions of Tripal Alchemist will allow transforming select entities or overwriting properties.</p>';
+
+  $markup .= theme('table', $table);
 
   $form['div2']['transaction_summary'] = [
     '#type' => 'markup',
@@ -133,9 +139,7 @@ function tripal_alchemist_converter_form($form, &$form_state) {
   ];
 
 
-  // $form['div2close'] = ['#type' => 'markup', '#markup' => '</div>'];
-
-  $form['Submit'] = [
+  $form['div2']['submit'] = [
     '#type' => 'submit',
     '#value' => t('Submit'),
   ];
@@ -145,6 +149,8 @@ function tripal_alchemist_converter_form($form, &$form_state) {
 
 
 function tripal_alchemist_converter_form_submit($form, &$form_state) {
+$source_bundle_id = $form_state['values']['source_bundle'];
+  $destination_bundle_id = $form_state['values']['destination_bundle'];
 
 }
 
@@ -174,10 +180,20 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
   $source_table = "chado." . $source_bundle->data_table;//CBT  CHADO BASE TABLE
   $source_entity_table = "public.chado_" . $source_bundle->name; //SET SOURCE ENTITY TABLE
 
+
+  if (!$destination_bundle->type_linker_table) {
+    //todo this check needs to be more rigorous: check that theres a type_column and a type_linker table first, mabe the bundle just doesnt have a type anything
+    tripal_set_message("Your destination bundle uses a type_id rather than a type linker table.  This feature has not yet been developed.", TRIPAL_ERROR);
+    return;
+  }
+
   $type_linker_table = "chado." . $destination_bundle->type_linker_table; //CLT CHADO LINKER TABLE
   $type_column = $destination_bundle->type_column;
   $type_id = $destination_bundle->type_id;
   $type_value = $destination_bundle->type_value;
+
+  //TODO:  Based on the above values, we need to modify the SQL to select from a typie_id column or from a linker table.
+
 
   //TODO:  joining on the data_table_id is risky.  This works for analysis but which ones does it fail on?
   //TODO:  CBT.name: is this fair?  What can i get thats relaiably human readable?
@@ -188,7 +204,6 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
           WHERE CLT." . $type_column . " = :type_id
           AND CLT.value = :type_value 
           ";
-  dpm($sql);
 
   $results = db_query($sql, [
     ":type_id" => $type_id,
@@ -199,19 +214,21 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
 
   foreach ($results as $result) {
     $entry = [];
-    dpm($result);
     $entry = [
-      'record_id' => $result->record_id,
-      'entity_id' => $result->entity_id,
+      $result->record_id,
+      $result->entity_id,
+      $result->name,
     ];
-    array_push($rows, $entry);
+
+    $rows[] = $entry;
+
   }
 
   if (!$rows) {
     return NULL;
   }
 
-  $headers = ['record ID', 'entity ID', 'Name'];
+  $headers = ['Record ID', 'Entity ID', 'Name'];
 
   $table = [
     'header' => $headers,
