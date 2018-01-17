@@ -1,7 +1,7 @@
 Tripal Alchemist allows you to **transmute** (convert) entities from one type to another.
 
->![Tripal Alchemist Hearthstone Card](docs/img/Tripal_Alchemist_hearthstone_logo.png)
-> Tripal Alchemist 
+![Tripal Alchemist Hearthstone Card](docs/img/Tripal_Alchemist_hearthstone_logo.png)
+
 
 Tripal 3 provides migrations for most base content types.  Some content types (namely Analysis) convert all nodes to a single bundle type.  This is not great if you make heavy use of submodules that define their own node type: in the case of analysis, this includes analysis_expression, analysis_unigene, etc.  You also might decide later down the road that you want to redefine some of your `mrna` features as `mrna_contig`, for example.
 
