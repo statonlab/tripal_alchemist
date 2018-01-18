@@ -18,7 +18,7 @@ Keep in mind that you **must** have some way of differentiating your entities.  
 
 ## Detailed Guide
 
-This guide will demonstrate how to define a new Chado content type with Tripal 3.
+This guide will demonstrate how to define a new Chado content type with Tripal 3.  There is a similar guide [on tripal.info](http://tripal.info/tutorials/v3.x/content-types) which you can also review.
 
 For the purposes of this demo, let us assume that we have a custom module for storing proteomic analyses.  Our module had a custom node, analysis_proteome, and after migrating to Tripal 3, all those nodes were converted to one generic analysis type.
 
