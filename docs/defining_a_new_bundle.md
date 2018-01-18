@@ -11,18 +11,19 @@ Keep in mind that you **must** have some way of differentiating your entities.  
 * Match your new bundle to the CVterm.
 * Set the Storage backend to Chado.
 * Select the appropriate Chado Table.
-* Determine if this term is the exclusive user of this Chado table.  If it is, you can select "Yes" when asked if all records in the Chado table will be of this type, and press "Create Content Type"
+* Determine if this term is the exclusive user of this Chado table.  If it is, you can select "Yes" when asked if all records in the Chado table will be of this type, and press "Create Content Type".
 * if the Chado Table is shared, select the appropriate method for distinguishing content types. This will either be a *property table* or a *type_id* column in the base table.
 * If using a property table, specify a property type cvterm.
 * Select the matching property value to distinguish this type.
 
-## Detailed guide
+## Detailed Guide
 
 This guide will demonstrate how to define a new Chado content type with Tripal 3.
 
 For the purposes of this demo, let us assume that we have a custom module for storing proteomic analyses.  Our module had a custom node, analysis_proteome, and after migrating to Tripal 3, all those nodes were converted to one generic analysis type.
 
-### CVterm
+### Picking a CVterm
+
 Before we begin, let's pick an appropriate CVterm for our bundle.  The ideal term will be specific enough to not overlap with other content, but broad enough to work for other users who might download your module.  For example, we wouldn't want to say "flatworm proteome analysis" when "proteome analysis" works just as well.
 I recommend using the [EBI Ontology Lookup Service](https://www.ebi.ac.uk/ols/index).  In our case, I've found a reasonable term in the OBI ontology: [protein expression profiling
 ](https://www.ebi.ac.uk/ols/ontologies/obi/terms?iri=http%3A%2F%2Fpurl.obolibrary.org%2Fobo%2FOBI_0000615).
@@ -34,12 +35,13 @@ Next, make sure the term is in your database.  If you've already loaded the enti
 
 A note: if you are stumped, or can't seem to find a good CVterm, you can use the local CV, but this is discouraged.   
 
-### Bundle
+### Bundle Creation
 
 Now that we have a CVTerm for our bundle, let's add it to Tripal.  You can add a new Tripal Content Type (Bundle) by navigating to Structure -> Tripal Content Types -> Add Tripal Content Type in the admin menu.  To fill out this form, we need to know our CVterm, what Chado base table our bundle uses, and how the content type is differentiated if the table is shared.  In the case of our demo Protein Expression Profiling bundle, we know that it is one of several content types using the *Analysis* Chado base table. 
 
 >![admin location of adding a content type](img/create_bundle_1.png)
-> How to create new Tripal Content Types (bundles) via the admin panel. 
+>
+> You can create new Tripal Content Types (bundles) via the admin panel by navigating to Structure -> Tripal Content Types. 
 
 > ![Look up the bundle term](img/create_bundle_lookup_bundle_term.png)
 > First, assign your term to your bundle.  You should have a term in the *Matching Terms* box after pressing Lookup Term.
@@ -57,3 +59,9 @@ Tripal will **automatically make suggestions**for where to store the type based 
 > In this example, we specify our bundle type in the analysisprop table.  There is a property associated with our analysis via this table where the type_id matches the cvterm we specify (Analysis Type), and the corresponding value should be tripal_protein_expression.
 
 For our Protein Expression Profiling bundle, we want to use the `analysisprop` table.  Tripal (and Tripal Alchemist!) will look for entries in the analysis table that have a property in the analysisprop table where type_id = the cvterm for the type (Analysis Type in this case).  Tripal will know that the analysis is a Protein Expression Profiling if the `value` column of that property is equal to the text we specified: `tripal_protein_expression`.  For analyses created by modules, this is the convention: set the Analysis Type cvterm equal to the *module name*.
+
+### Populating our Bundle
+
+Now that our bundle exists, we can create new content directly by going to Content -> Tripal Content -> + Add Tripal Content.
+
+If you've already got Tripal 2 nodes for your content, you can migrate them using the core migrator available at Tripal -> Data Storage -> Chado -> Migrate.  Analyses will all migrate to the Analysis content type, so you can use *Tripal Alchemist* to migrate your content *from* Analysis *to* the new bundle type.  For our ddemo, this would be Protein Expression Profiling.
