@@ -11,7 +11,7 @@ This module is under active development and is not yet released.
 
 ## Usage
 
-* Define a destination bundle that is the same base table as your source bundle
+* Define a destination bundle that is the same base table as your source bundle.  [You can follow this guide to learn how to define new bundles](docs/defining_a_new_bundle.md).  
 * Navigate to the transmuter, located at `/admin/tripal/extension/tripal_alchemist`.
 * Select a source bundle.  This is the current content type, and qualifying entities from this type will be transformed.
 * Select a destination bundle.  This is what you want to turn your content into.
