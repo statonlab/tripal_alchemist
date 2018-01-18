@@ -167,7 +167,7 @@ function tripal_alchemist_convert_all_entities($args) {
           LEFT JOIN  " . $destination_table . " DT ON A." . $base_record_column . " = DT.record_id
           WHERE CVT.cvterm_id = :cvterm_id 
             AND AP.value = :descrim_prop_value 
-            AND DT.record_id = NULL)";
+            AND DT.record_id IS NULL)";
 
   //removed: ON CONFLICT DO NOTHING; for older versions of postgres
 

@@ -2,7 +2,7 @@
 
 function tripal_alchemist_converter_form($form, &$form_state) {
 
-  //Fetch all bundles
+  // Fetch all bundles
 
   $all_bundles_object = tripal_alchemist_get_all_bundles();
 
@@ -10,7 +10,7 @@ function tripal_alchemist_converter_form($form, &$form_state) {
   $bundle_options = [];
 
   foreach ($all_bundles_object as $bundle) {
-    //Do I really need to do this?
+    // Do I really need to do this?
     if ($bundle->type != 'TripalEntity') {
       continue;
     }
@@ -39,7 +39,7 @@ function tripal_alchemist_converter_form($form, &$form_state) {
   ];
 
 
-  //create the divs for AJAX rebuilding.  One for the destination bundle select, one for the transaction overview
+  // Create the divs for AJAX rebuilding.  One for the destination bundle select, one for the transaction overview
   $form['div1'] = [
     '#type' => 'fieldset',
     '#collapsible' => FALSE,
