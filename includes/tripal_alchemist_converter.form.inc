@@ -21,7 +21,7 @@ function tripal_alchemist_converter_form($form, &$form_state) {
   $form['instructions'] = [
     '#markup' => '<p>Welcome to Tripal Alchemist. This module is designed to convert Tripal Entities from one type to another.  Your destination bundle must already exist before transmuting.</p><p>Please note that Tripal Alchemist will only convert <b>Tripal 3 Entities</b>.  Tripal 2 content types (nodes) must be migrated.</p>
         <p>Full documentation of this module is available on <a href = "https://github.com/statonlab/tripal_alchemist/">the projects Github page.</a></p>
-',
+        ',
   ];
 
   $form['source_bundle'] = [

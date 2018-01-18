@@ -233,9 +233,9 @@ function tripal_alchemist_fetch_current_bundle_entities($bundle) {
 }
 
 
-function tripal_alchemist_fetch_elligible_bundle_entities() {
-
-}
+//function tripal_alchemist_fetch_elligible_bundle_entities() {
+//
+//}
 
 function function_tripal_alchemist_get_bundle($bundle_id) {
 
@@ -243,4 +243,13 @@ function function_tripal_alchemist_get_bundle($bundle_id) {
   $query = "SELECT TB.name, TB.label FROM public.tripal_bundle TB WHERE TB.id = :bundle_id";
   $result = db_query($query, [':bundle_id' => $bundle_id])->fetchObject();
   return $result;
+}
+
+function tripal_alchemist_get_all_entities_from_bundle($bundle) {
+
+ $base_table =  $bundle->table;
+ $tb_table = "chado_" . $bundle->name;
+
+  $query = db_select($tb_table, 'tb');
+
 }
