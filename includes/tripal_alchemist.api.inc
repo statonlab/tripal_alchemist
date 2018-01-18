@@ -12,7 +12,8 @@ function tripal_alchemist_get_all_bundles() {
   // Get all bundle names to cycle through.
   $all_bundles = db_select('tripal_bundle', 'tb')
     ->fields('tb', ['name'])
-    ->execute()->fetchAll();
+    ->execute()
+    ->fetchAll();
 
   foreach ($all_bundles as $bundle_name) {
     // Get the bundle object.
