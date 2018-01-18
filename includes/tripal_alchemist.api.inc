@@ -12,7 +12,8 @@ function tripal_alchemist_get_all_bundles() {
   // Get all bundle names to cycle through.
   $all_bundles = db_select('tripal_bundle', 'tb')
     ->fields('tb', ['name'])
-    ->execute()->fetchAll();
+    ->execute()
+    ->fetchAll();
 
   foreach ($all_bundles as $bundle_name) {
     // Get the bundle object.
@@ -130,13 +131,8 @@ function tripal_alchemist_get_matching_bundles($source_table) {
 //}
 
 function tripal_alchemist_convert_all_entities($args) {
-  var_dump($args);
-
   $source_bundle = $args['source_bundle'];
   $destination_bundle = $args['destination_bundle'];
-
-  var_dump($source_bundle);
-  var_dump($destination_bundle);
 
   if (!$source_bundle || !$destination_bundle) {
     tripal_set_message("Error: Destination and source bundle not provided.  Cannot convert entities without source and destination bundles.", TRIPAL_ERROR);
@@ -165,12 +161,14 @@ function tripal_alchemist_convert_all_entities($args) {
 
   //copy the entity over from source to destination
   $sql = "INSERT INTO " . $destination_table . " (entity_id, record_id)
-SELECT AB.entity_id AS entity_id, AB.record_id AS record_id FROM " . $chado_base_table . "  A
-INNER JOIN  " . $chado_prop_table . " AP  ON A." . db_escape_field($base_record_column) . " = AP. " . ($base_record_column) . "
-INNER JOIN chado.cvterm CVT ON AP." . ($type_column) . " = CVT.cvterm_id
-INNER JOIN  " . $source_bundle_table . " AB ON A." . ($base_record_column) . " = AB.record_id
-WHERE CVT.cvterm_id = :cvterm_id
-AND AP.value = :descrim_prop_value";
+          (SELECT AB.entity_id AS entity_id, AB.record_id AS record_id FROM " . $chado_base_table . "  A
+          INNER JOIN  " . $chado_prop_table . " AP  ON A." . db_escape_field($base_record_column) . " = AP. " . ($base_record_column) . "
+          INNER JOIN chado.cvterm CVT ON AP." . ($type_column) . " = CVT.cvterm_id
+          INNER JOIN  " . $source_bundle_table . " AB ON A." . ($base_record_column) . " = AB.record_id
+          LEFT JOIN  " . $destination_table . " DT ON A." . $base_record_column . " = DT.record_id
+          WHERE CVT.cvterm_id = :cvterm_id 
+            AND AP.value = :descrim_prop_value 
+            AND DT.record_id IS NULL)";
 
   //removed: ON CONFLICT DO NOTHING; for older versions of postgres
 

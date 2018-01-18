@@ -2,7 +2,7 @@
 
 function tripal_alchemist_converter_form($form, &$form_state) {
 
-  //Fetch all bundles
+  // Fetch all bundles
 
   $all_bundles_object = tripal_alchemist_get_all_bundles();
 
@@ -10,7 +10,7 @@ function tripal_alchemist_converter_form($form, &$form_state) {
   $bundle_options = [];
 
   foreach ($all_bundles_object as $bundle) {
-    //Do I really need to do this?
+    // Do I really need to do this?
     if ($bundle->type != 'TripalEntity') {
       continue;
     }
@@ -39,7 +39,7 @@ function tripal_alchemist_converter_form($form, &$form_state) {
   ];
 
 
-  //create the divs for AJAX rebuilding.  One for the destination bundle select, one for the transaction overview
+  // Create the divs for AJAX rebuilding.  One for the destination bundle select, one for the transaction overview
   $form['div1'] = [
     '#type' => 'fieldset',
     '#collapsible' => FALSE,
@@ -189,11 +189,11 @@ function tripal_alchemist_destination_bundle_callback($form) {
  * @return array|null
  */
 function tripal_alchemist_build_transaction_table($source_bundle, $destination_bundle) {
-
-  // what we want to do is a) Pull all the **source**  bundle entities
+  // What we want to do is a) Pull all the **source**  bundle entities
   // and look at how many of those qualify for the destination bundle.
   $source_table = "chado." . $source_bundle->data_table;//CBT  CHADO BASE TABLE
   $source_entity_table = "public.chado_" . $source_bundle->name; //SET SOURCE ENTITY TABLE
+  $destination_entity_table = "public.chado_" . $destination_bundle->name;
 
 
   if (!$destination_bundle->type_linker_table) {
@@ -207,36 +207,28 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
   $type_id = $destination_bundle->type_id;
   $type_value = $destination_bundle->type_value;
 
-  //TODO:  Based on the above values, we need to modify the SQL to select from a typie_id column or from a linker table.
-
-
-  //TODO:  joining on the data_table_id is risky.  This works for analysis but which ones does it fail on?
-  //TODO:  CBT.name: is this fair?  What can i get thats relaiably human readable?
-
-  $sql = "SELECT SET.record_id, SET.entity_id, CBT.name  FROM {" . db_escape_table($source_table) . "} CBT 
-          INNER JOIN {" . db_escape_table($source_entity_table) . "} SET ON SET.record_id = CBT." . $source_bundle->data_table . "_id
-          INNER JOIN {" . db_escape_table($type_linker_table) . "} CLT ON CBT." . $source_bundle->data_table . "_id = CLT." . $source_bundle->data_table . "_id 
-          WHERE CLT." . $type_column . " = :type_id
-          AND CLT.value = :type_value 
-          ";
-
-  $results = db_query($sql, [
-    ":type_id" => $type_id,
-    ":type_value" => $type_value,
-  ]);
+  //TODO:  Based on the above values, we need to modify the SQL to select from a type_id column or from a linker table.
+  //TODO:  Joining on the data_table_id is risky.  This works for analysis but which ones does it fail on?
+  //TODO:  CBT.name: is this fair?  What can I get that's relaiably human readable?
+  $query = db_select($source_table, 'CBT');
+  $query->fields('SET', ['record_id', 'entity_id']);
+  $query->fields('CBT', ['name']);
+  $query->innerJoin($source_entity_table, 'SET', 'SET.record_id = CBT.' . $source_bundle->data_table . '_id');
+  $query->innerJoin($type_linker_table, 'CLT', 'CBT.' . $source_bundle->data_table . '_id = CLT.' . $source_bundle->data_table . '_id');
+  $query->leftJoin($destination_entity_table, 'DET', 'SET.record_id = DET.record_id');
+  $query->condition('CLT.' . $type_column, $type_id);
+  $query->condition('CLT.value', $type_value);
+  $query->condition('DET.record_id', NULL, 'IS');
+  $results = $query->execute()->fetchAll();
 
   $rows = [];
 
   foreach ($results as $result) {
-    $entry = [];
-    $entry = [
+    $rows[] = [
       $result->record_id,
       $result->entity_id,
       $result->name,
     ];
-
-    $rows[] = $entry;
-
   }
 
   if (!$rows) {
@@ -250,6 +242,6 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
     'rows' => $rows,
   ];
 
-  return ($table);
+  return $table;
 }
 
