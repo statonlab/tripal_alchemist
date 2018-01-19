@@ -198,7 +198,6 @@ function tripal_alchemist_converter_form_submit($form, &$form_state) {
   if ($transmutation_type == 'Manual') {
     $source_entities = $form_state['values']['manual_entity_select'];
     $source_entities = array_filter($source_entities);//remove unchecked selections
-    dpm($source_entities);
 
     $job_args['source_entities'] = $source_entities;
     tripal_alchemist_convert_select_entities($job_args);
@@ -308,9 +307,9 @@ function tripal_alchemist_build_choosable_table($form, $source_bundle) {
 
   foreach ($results as $result) {
     $rows[$result->entity_id] = [
-      $result->record_id,
-      $result->entity_id,
-      $result->name,
+      'record_id' => $result->record_id,
+      'entity_id' => $result->entity_id,
+      'name' => $result->name,
     ];
   }
 
@@ -318,7 +317,11 @@ function tripal_alchemist_build_choosable_table($form, $source_bundle) {
     return NULL;
   }
 
-  $headers = ['Record ID', 'Entity ID', 'Name'];
+  $headers = [
+    'record_id' => t('Record ID'),
+    'entity_id' => t('Entity ID'),
+    'name' => t('Name'),
+  ];
 
   $form['div2']['manual_entity_select'] = [
     '#type' => 'tableselect',
