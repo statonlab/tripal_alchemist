@@ -19,7 +19,7 @@ function tripal_alchemist_converter_form($form, &$form_state) {
   }
 
   $form['instructions'] = [
-    '#markup' => '<p>Welcome to Tripal Alchemist. This module is designed to convert Tripal Entities from one type to another.  Your destination bundle must already exist before transmuting.</p><p>Please note that Tripal Alchemist will only convert <b>Tripal 3 Entities</b>.  Tripal 2 content types (nodes) must be migrated.</p>
+    '#markup' => '<p>Welcome to Tripal Alchemist. This module is designed to convert Tripal Entities from one type to another (a process called "transmutation" in clasical alchemy).  Your destination bundle must already exist before transmuting.</p><p>Please note that Tripal Alchemist will only convert <b>Tripal 3 Entities</b>.  Tripal 2 content types (nodes) must be migrated.</p>
         <p>Full documentation of this module is available on <a href = "https://github.com/statonlab/tripal_alchemist/">the projects Github page.</a></p>
         ',
   ];
@@ -35,6 +35,20 @@ function tripal_alchemist_converter_form($form, &$form_state) {
       'callback' => 'tripal_alchemist_source_bundle_callback',
       'wrapper' => 'destination_bundle_wrapper',
       'effect' => 'fade',
+    ],
+  ];
+
+
+  $form['convert_ready_entities'] = [
+    '#type' => 'radios',
+    '#title' => 'Transmutation Method',
+    '#description' => 'Tripal Alchemist can automatically convert all entities from a source bundle to a destination bundle, if those entities already meet the criteria for the destination bundle.  This typically means that a type_id column or property is already set.  You can instead choose to manually select entities to convert.',
+    '#options' => ['Automatic', 'Manual'],
+    '#default_value' => 'Automatic',
+    '#ajax' => [
+      'callback' => 'tripal_alchemist_destination_bundle_callback',
+      'wrapper' => 'report_on_migrations_wrapper',
+      'effect' => 'fade'
     ],
   ];
 
@@ -95,6 +109,7 @@ function tripal_alchemist_converter_form($form, &$form_state) {
 
   }
 
+
   $form['div1']['destination_bundle'] = [
     '#type' => 'select',
     '#title' => t('Destination Bundle'),
@@ -105,6 +120,7 @@ function tripal_alchemist_converter_form($form, &$form_state) {
     '#ajax' => [
       'callback' => 'tripal_alchemist_destination_bundle_callback',
       'wrapper' => 'report_on_migrations_wrapper',
+      'effect' => 'fade'
     ],
   ];
 
@@ -141,7 +157,7 @@ function tripal_alchemist_converter_form($form, &$form_state) {
 
   $form['div2']['submit'] = [
     '#type' => 'submit',
-    '#value' => t('Submit'),
+    '#value' => t('Transmute (Submit)'),
   ];
 
   return $form;
