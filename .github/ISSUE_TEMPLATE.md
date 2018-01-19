@@ -6,34 +6,24 @@
 
 <!--
 Please choose one of the below options.
-
-
 Please name your issue so that your choice is included in brackets at hte beginning.
-
 For example, a bug report would be [bug]-Chado properties give me an sql error
-
-
 IF FILING A BUG REPORT, PLEASE FILL OUT THE ENTIRE TEMPLATE.
-
 --->
 * Bug Report [bug]  
 * Question [question]
 * Discussion [discussion]
 * Feature Request [request]
 
-
 ## Bug report info
-
 ### Environment
 
 <!--
 The more information you include here, the easier it will be for us to help.
-  
 -->
 * PHP version - 
 * Tripal version - 
 * Postgres version - 
-
 
 ### Steps to Reproduce
 
@@ -69,9 +59,3 @@ The more information you include here, the easier it will be for us to help.
 -->
 
 (Write what happened. Add screenshots!)
-
-
-<!--
-
-  Thanks for helping us help you!
--->
