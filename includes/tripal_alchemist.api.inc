@@ -159,6 +159,8 @@ function tripal_alchemist_convert_all_entities($args) {
   //Need to use query builder instead
   //on conflict will ignore duplicate insert attempts from, say, migrating 2x and resulting in duplicate id's
 
+
+  //TODO:  UPDATE THIS TO MODERN QUERY BUILDER, SEE FORM
   //copy the entity over from source to destination
   $sql = "INSERT INTO " . $destination_table . " (entity_id, record_id)
           (SELECT AB.entity_id AS entity_id, AB.record_id AS record_id FROM " . $chado_base_table . "  A
@@ -215,6 +217,90 @@ AND AP.value = :descrim_prop_value)";
 }
 
 
+function tripal_alchemist_convert_select_entities($args) {
+  dpm($args);
+
+  $source_bundle = $args['source_bundle'];
+  $destination_bundle = $args['destination_bundle'];
+  $source_entities = $args['source_entities'];
+
+
+  if (!$source_bundle || !$destination_bundle) {
+    tripal_set_message("Error: Destination and source bundle not provided.  Cannot convert entities without source and destination bundles.", TRIPAL_ERROR);
+  }
+
+
+  //get all our source and destination table info
+  $descriminating_type_cvterm_id = $destination_bundle->type_id;
+  $descriminating_prop_value = $destination_bundle->type_value;
+  $type_column = $destination_bundle->type_column;
+  $source_bundle_table = "public.chado_" . $source_bundle->name;
+  $destination_term = $destination_bundle->term_id;
+  $destination_table = "public.chado_" . $destination_bundle->name;
+  $chado_base_table = "chado." . $source_bundle->data_table;
+  $chado_prop_table = $chado_base_table . "prop";
+
+  //TODO:  add any hard-coded exceptions here since we guess the primary record column
+  $base_record_column = $source_bundle->data_table . "_id";
+
+
+  //First, set the property in Chado for each selected record.
+
+  foreach ($source_entities as $entity_id) {
+    $chado_entity_table = chado_get_bundle_entity_table($source_bundle);
+    $record_id = db_select($chado_entity_table, 'CE')
+      ->fields('CE', ['record_id'])
+      ->condition('CE.entity_id', $entity_id)
+      ->execute()
+      ->fetchField();
+
+    if (!$record_id){      tripal_report_error("Could not retrieve record id for entity $entity_id.  Aborting.", TRIPAL_ERROR);
+    }
+
+    $record = ['table' => $source_bundle->data_table, 'id' => $record_id];
+    $property = [
+      'type_id' => $descriminating_type_cvterm_id,
+      'value' => $descriminating_prop_value,
+    ];
+    $options = ['update_if_present' => TRUE];
+
+    if (!chado_insert_property($record, $property, $options)) {
+      tripal_report_error("Could not update property for entity $entity_id.  Aborting.", TRIPAL_ERROR);
+      return;
+    }
+  }
+
+  //Now, perform the three-step transmutation... but only on the selected entities
+
+
+  //NOTE... THIS WOULD BE A LOT SIMPLER IF I HAD THE ENTITY AND RECORD ID- THATS ALL I NEED!
+  //I JUST HAD IT IN THE FORM!
+  //LETS PASS IT IN INSTEAD!
+
+
+  //copy the entity over from source to destination
+  $sql = "INSERT INTO " . $destination_table . " (entity_id, record_id)
+          (SELECT AB.entity_id AS entity_id, AB.record_id AS record_id FROM " . $chado_base_table . "  A
+          INNER JOIN  " . $chado_prop_table . " AP  ON A." . db_escape_field($base_record_column) . " = AP. " . ($base_record_column) . "
+          INNER JOIN chado.cvterm CVT ON AP." . ($type_column) . " = CVT.cvterm_id
+          INNER JOIN  " . $source_bundle_table . " AB ON A." . ($base_record_column) . " = AB.record_id
+          LEFT JOIN  " . $destination_table . " DT ON A." . $base_record_column . " = DT.record_id
+          WHERE CVT.cvterm_id = :cvterm_id 
+            AND AP.value = :descrim_prop_value 
+            AND DT.record_id IS NULL)";
+
+  //removed: ON CONFLICT DO NOTHING; for older versions of postgres
+
+
+  $results = db_query($sql, [
+    ":cvterm_id" => $descriminating_type_cvterm_id,
+    ":descrim_prop_value" => $descriminating_prop_value,
+  ]);
+
+
+}
+
+
 /**
  * Given a bundle object, count the number of entries for that bundle.
  *
@@ -245,8 +331,8 @@ function function_tripal_alchemist_get_bundle($bundle_id) {
 
 function tripal_alchemist_get_all_entities_from_bundle($bundle) {
 
- $base_table =  $bundle->table;
- $tb_table = "chado_" . $bundle->name;
+  $base_table = $bundle->table;
+  $tb_table = "chado_" . $bundle->name;
 
   $query = db_select($tb_table, 'tb');
 

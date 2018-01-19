@@ -39,19 +39,18 @@ function tripal_alchemist_converter_form($form, &$form_state) {
   ];
 
 
-  $form['convert_ready_entities'] = [
+  $form['transmutation_type'] = [
     '#type' => 'radios',
     '#title' => 'Transmutation Method',
     '#description' => 'Tripal Alchemist can automatically convert all entities from a source bundle to a destination bundle, if those entities already meet the criteria for the destination bundle.  This typically means that a type_id column or property is already set.  You can instead choose to manually select entities to convert.',
-    '#options' => ['Automatic', 'Manual'],
+    '#options' => ['Automatic' => 'Automatic', 'Manual' => 'Manual'],
     '#default_value' => 'Automatic',
     '#ajax' => [
       'callback' => 'tripal_alchemist_destination_bundle_callback',
       'wrapper' => 'report_on_migrations_wrapper',
-      'effect' => 'fade'
+      'effect' => 'fade',
     ],
   ];
-
 
   // Create the divs for AJAX rebuilding.  One for the destination bundle select, one for the transaction overview
   $form['div1'] = [
@@ -120,7 +119,7 @@ function tripal_alchemist_converter_form($form, &$form_state) {
     '#ajax' => [
       'callback' => 'tripal_alchemist_destination_bundle_callback',
       'wrapper' => 'report_on_migrations_wrapper',
-      'effect' => 'fade'
+      'effect' => 'fade',
     ],
   ];
 
@@ -136,24 +135,33 @@ function tripal_alchemist_converter_form($form, &$form_state) {
 
   $destination_bundle = $all_bundles_array[$selected_destination];
 
-  $table = tripal_alchemist_build_transaction_table($source_bundle, $destination_bundle);
+  //User can either let alchemist automatically convert entities that have properties already set
+  // OR user can view list of entities and manually select those that match.
+  //TODO: third option: filter by a source bundle property/value pair
 
+  $transmutation_type = $form_state['values']['transmutation_type'];
 
-  if (!$table) {
-    $form['div2']['kill'] = ['#markup' => '<p>No qualifying entries.  Please pick another source or destination table.</p>'];
+  if ($transmutation_type == 'Automatic') {
+    $table = tripal_alchemist_build_transaction_table($source_bundle, $destination_bundle);
 
-    return $form;
+    if (!$table) {
+      $form['div2']['kill'] = ['#markup' => '<p>No qualifying entries.  Please pick another source or destination table.</p>'];
+      return $form;
+    }
+    $markup = '<h3>Qualifying Entities</h3><p>Entities from the source bundle that meet the Destination bundle storage criteria are listed below.</p><p><b>ALL</b> of the below entities will be transformed into the destination entity bundle type.  Future versions of Tripal Alchemist will allow transforming select entities or overwriting properties.</p>';
+
+    $markup .= theme('table', $table);
+
+    $form['div2']['transaction_summary'] = [
+      '#type' => 'markup',
+      '#markup' => $markup,
+    ];
   }
 
-  $markup = '<h3>Qualifying Entities</h3><p>Entities from the source bundle that meet the Destination bundle storage criteria are listed below.</p><p><b>ALL</b> of the below entities will be transformed into the destination entity bundle type.  Future versions of Tripal Alchemist will allow transforming select entities or overwriting properties.</p>';
-
-  $markup .= theme('table', $table);
-
-  $form['div2']['transaction_summary'] = [
-    '#type' => 'markup',
-    '#markup' => $markup,
-  ];
-
+  //if manual, we're going to do instead build a checkbox table
+  if ($transmutation_type == 'Manual') {
+    $form = tripal_alchemist_build_choosable_table($form, $source_bundle);
+  }
 
   $form['div2']['submit'] = [
     '#type' => 'submit',
@@ -165,11 +173,12 @@ function tripal_alchemist_converter_form($form, &$form_state) {
 
 
 function tripal_alchemist_converter_form_submit($form, &$form_state) {
+
   global $user;
 
   $source_bundle_id = $form_state['values']['source_bundle'];
   $destination_bundle_id = $form_state['values']['destination_bundle'];
-
+  $transmutation_type = $form_state['values']['transmutation_type'];
 
   $source_bundle = tripal_load_bundle_entity(['id' => $source_bundle_id]);
   $destination_bundle = tripal_load_bundle_entity(['id' => $destination_bundle_id]);
@@ -179,10 +188,22 @@ function tripal_alchemist_converter_form_submit($form, &$form_state) {
     "destination_bundle" => $destination_bundle,
   ];
 
+
   // tripal_add_job("Alchemist transmute:" . $source_bundle->label . "to " . $destination_bundle->label, 'tripal_alchemist', 'tripal_alchemist_convert_all_entities', $job_args, $user->uid, 10);
 
-  tripal_set_message("Transmutation successful!", TRIPAL_INFO);
-  tripal_alchemist_convert_all_entities($job_args);
+  if ($transmutation_type == 'Automatic') {
+    tripal_alchemist_convert_all_entities($job_args);
+    tripal_set_message("Transmutation successful!", TRIPAL_INFO);
+  }
+  if ($transmutation_type == 'Manual') {
+    $source_entities = $form_state['values']['manual_entity_select'];
+    $source_entities = array_filter($source_entities);//remove unchecked selections
+    dpm($source_entities);
+
+    $job_args['source_entities'] = $source_entities;
+    tripal_alchemist_convert_select_entities($job_args);
+
+  }
 }
 
 
@@ -205,6 +226,7 @@ function tripal_alchemist_destination_bundle_callback($form) {
  * @return array|null
  */
 function tripal_alchemist_build_transaction_table($source_bundle, $destination_bundle) {
+
   // What we want to do is a) Pull all the **source**  bundle entities
   // and look at how many of those qualify for the destination bundle.
   $source_table = "chado." . $source_bundle->data_table;//CBT  CHADO BASE TABLE
@@ -259,5 +281,52 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
   ];
 
   return $table;
+}
+
+
+function tripal_alchemist_build_choosable_table($form, $source_bundle) {
+
+  // What we want to do is
+  // * Pull all the **source**  bundle entities
+  // * Build a checkbox table with each entity
+  //TODO this would be much better if it was searchable by property or anything really...
+
+  $source_table = "chado." . $source_bundle->data_table;//CBT  CHADO BASE TABLE
+  $source_entity_table = "public.chado_" . $source_bundle->name; //SET SOURCE ENTITY TABLE
+
+
+  //TODO:  Based on the above values, we need to modify the SQL to select from a type_id column or from a linker table.
+  //TODO:  Joining on the data_table_id is risky.  This works for analysis but which ones does it fail on?
+  //TODO:  CBT.name: is this fair?  What can I get that's relaiably human readable?
+  $query = db_select($source_table, 'CBT');
+  $query->fields('SET', ['record_id', 'entity_id']);
+  $query->fields('CBT', ['name']);
+  $query->innerJoin($source_entity_table, 'SET', 'SET.record_id = CBT.' . $source_bundle->data_table . '_id');
+  $results = $query->execute()->fetchAll();
+
+  $rows = [];
+
+  foreach ($results as $result) {
+    $rows[$result->entity_id] = [
+      $result->record_id,
+      $result->entity_id,
+      $result->name,
+    ];
+  }
+
+  if (!$rows) {
+    return NULL;
+  }
+
+  $headers = ['Record ID', 'Entity ID', 'Name'];
+
+  $form['div2']['manual_entity_select'] = [
+    '#type' => 'tableselect',
+    '#header' => $headers,
+    '#options' => $rows,
+    '#empty' => t('The source bundle is empty'),
+  ];
+
+  return ($form);
 }
 
