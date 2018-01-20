@@ -227,7 +227,7 @@ function tripal_alchemist_convert_select_entities($args) {
   if (!$source_bundle || !$destination_bundle) {
     tripal_set_message("Error: Destination and source bundle not provided.  Cannot convert entities without source and destination bundles.", TRIPAL_ERROR);
   }
-  if (   $source_bundle->data_table != $destination_bundle->data_table){
+  if ($source_bundle->data_table != $destination_bundle->data_table) {
     tripal_set_message("Error: destination and source bundles have the same base table.", TRIPAL_ERROR);
   }
 
@@ -257,7 +257,8 @@ function tripal_alchemist_convert_select_entities($args) {
       ->execute()
       ->fetchField();
 
-    if (!$record_id){      tripal_report_error("Could not retrieve record id for entity $entity_id.  Aborting.", TRIPAL_ERROR);
+    if (!$record_id) {
+      tripal_report_error("Could not retrieve record id for entity $entity_id.  Aborting.", TRIPAL_ERROR);
     }
 
     $record = ['table' => $source_bundle->data_table, 'id' => $record_id];
@@ -265,6 +266,8 @@ function tripal_alchemist_convert_select_entities($args) {
       'type_id' => $descriminating_type_cvterm_id,
       'value' => $descriminating_prop_value,
     ];
+
+    dpm($property);
     $options = ['update_if_present' => TRUE];
 
     if (!chado_insert_property($record, $property, $options)) {
@@ -273,20 +276,30 @@ function tripal_alchemist_convert_select_entities($args) {
     }
 
     //insert into the destination table
-    //TODO WAIT HOW DOES IT KNOW IF ITS IN CHADO OR PUBLIC?
-    $result = db_insert($destination_table)
-    ->fields(['entity_id' => $entity_id, 'record_id' => $record_id]);
+    //Ignore duplicates
+    try {
+      $result = db_insert($destination_table)
+        ->fields(['entity_id' => $entity_id, 'record_id' => $record_id])
+        ->execute();    } catch (Exception $e) {
+      // ignored
+    }
 
     //update the tripal entity table
 
-    $result = db_update("");
+    $result = db_update("public.tripal_entity")
+      ->fields([
+        'bundle' => $destination_bundle->name,
+        'term_id' => $destination_term,
+      ])
+      ->condition('id', $entity_id, '=')
+      ->execute();
 
-    //delete from source table
-
+    //delete from source
+    //TODO: CHECK THAT IT WAS SUCCESFUL BEFORE DELETING
     $result = db_delete($source_bundle_table)
-      ->fields(['entity_id' => $entity_id, 'record_id' => $record_id]);
-    //TODO: ONLY DELETE IF ITS PRESENT IN THE DESTINATION
-
+      ->condition('entity_id', $entity_id)
+    ->condition('record_id' , $record_id)
+    ->execute();
   }
 
 }
