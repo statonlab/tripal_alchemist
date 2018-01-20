@@ -267,7 +267,6 @@ function tripal_alchemist_convert_select_entities($args) {
       'value' => $descriminating_prop_value,
     ];
 
-    dpm($property);
     $options = ['update_if_present' => TRUE];
 
     if (!chado_insert_property($record, $property, $options)) {
