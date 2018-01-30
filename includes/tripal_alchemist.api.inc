@@ -194,6 +194,7 @@ AND AP.value = :descrim_prop_value)";
     $source_bundle = $args['source_bundle'];
     $destination_bundle = $args['destination_bundle'];
     $source_entities = $args['source_entities'];
+    $collection = $args['collection'];
 
     if (!$source_bundle || !$destination_bundle) {
       tripal_set_message("Error: Destination and source bundle not provided.  Cannot convert entities without source and destination bundles.", TRIPAL_ERROR);
@@ -201,6 +202,13 @@ AND AP.value = :descrim_prop_value)";
     if ($source_bundle->data_table != $destination_bundle->data_table) {
       tripal_set_message("Error: destination and source bundles do not have the same base table.", TRIPAL_ERROR);
     }
+    //TODO
+    if ($collection) {
+      //get entities
+
+      //remove entities that don't match source bundle
+    }
+
 
     //get all our source and destination table info
     $descriminating_type_cvterm_id = $destination_bundle->type_id;

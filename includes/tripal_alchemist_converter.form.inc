@@ -43,7 +43,11 @@ function tripal_alchemist_converter_form($form, &$form_state) {
     '#type' => 'radios',
     '#title' => 'Transmutation Method',
     '#description' => 'Tripal Alchemist can automatically convert all entities from a source bundle to a destination bundle, if those entities already meet the criteria for the destination bundle.  This typically means that a type_id column or property is already set.  You can instead choose to manually select entities to convert.',
-    '#options' => ['Automatic' => 'Automatic', 'Manual' => 'Manual'],
+    '#options' => [
+      'Automatic' => 'Automatic',
+      'Manual' => 'Manual',
+      'Collections' => 'Collections',
+    ],
     '#default_value' => 'Automatic',
     '#ajax' => [
       'callback' => 'tripal_alchemist_destination_bundle_callback',
@@ -160,6 +164,11 @@ function tripal_alchemist_converter_form($form, &$form_state) {
     $form = tripal_alchemist_build_choosable_table($form, $source_bundle);
   }
 
+  if ($transmutation_type == 'Collections') {
+    //provide dropdown list of collections
+    $form = tripal_alchemist_provide_collection_list($form, $source_bundle);
+  }
+
   $form['div2']['submit'] = [
     '#type' => 'submit',
     '#value' => t('Transmute (Submit)'),
@@ -200,6 +209,16 @@ function tripal_alchemist_converter_form_submit($form, &$form_state) {
     tripal_alchemist_convert_select_entities($job_args);
 
   }
+
+  if ($transmutation_type == 'Collections'){
+
+   $collection = $form_state['values']['collection'];
+    $job_args['collection'] = $collection;
+
+    tripal_alchemist_convert_select_entities($job_args);
+
+  }
+
 }
 
 
@@ -364,3 +383,24 @@ function tripal_alchemist_build_choosable_table($form, $source_bundle) {
   return ($form);
 }
 
+function tripal_alchemist_provide_collection_list($form, $source_bundle) {
+  global $user;
+  $collections = tripal_get_user_collections($user->uid);
+
+  if (count($collections) === 0) {
+    $form['div2']['no_collection'] = [
+      '#markup' => "<h3>No Collections available</h3><p>You do not currently have any collections.  Please create a collection of entities you would like to convert.</p>",
+    ];
+    return $form;
+  }
+  $form['div2']['collection'] = [
+    '#type' => 'select',
+    '#title' => t('Available Collections'),
+    '#description' => t('Collections.  Alchemist will convert all entities in a collection form the source bundle to the destination bundle.'),
+    '#default' => NULL,
+    '#empty_option' => t('- Select -'),
+    '#options' => $collections,
+  ];
+
+  return $form;
+}
