@@ -84,7 +84,6 @@ function tripal_alchemist_converter_form($form, &$form_state) {
 
   $source_count = tripal_alchemist_fetch_current_bundle_entities($source_bundle);
 
-
   if (!$source_count) {
     $form['div1']['feedback'] = [
       '#markup' => "<p>Your selected source bundle <b>$source_bundle->label</b> has <b>no entities</b> in the database.  You must populate the source bundle first, either by creating content or migrating Tripal 2 nodes.</p>",
@@ -105,9 +104,7 @@ function tripal_alchemist_converter_form($form, &$form_state) {
     ];
 
     return $form;
-
   }
-
 
   $form['div1']['destination_bundle'] = [
     '#type' => 'select',
@@ -231,32 +228,46 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
   $source_table = "chado." . $source_bundle->data_table;//CBT  CHADO BASE TABLE
   $source_entity_table = "public.chado_" . $source_bundle->name; //SET SOURCE ENTITY TABLE
   $destination_entity_table = "public.chado_" . $destination_bundle->name;
-
-
-  if (!$destination_bundle->type_linker_table) {
-    //todo this check needs to be more rigorous: check that theres a type_column and a type_linker table first, mabe the bundle just doesnt have a type anything
-    tripal_set_message("Your destination bundle uses a type_id rather than a type linker table.  This feature has not yet been developed.", TRIPAL_ERROR);
-    return;
-  }
-
-  $type_linker_table = "chado." . $destination_bundle->type_linker_table; //CLT CHADO LINKER TABLE
   $type_column = $destination_bundle->type_column;
   $type_id = $destination_bundle->type_id;
   $type_value = $destination_bundle->type_value;
 
-  //TODO:  Based on the above values, we need to modify the SQL to select from a type_id column or from a linker table.
-  //TODO:  Joining on the data_table_id is risky.  This works for analysis but which ones does it fail on?
-  //TODO:  CBT.name: is this fair?  What can I get that's relaiably human readable?
-  $query = db_select($source_table, 'CBT');
-  $query->fields('SET', ['record_id', 'entity_id']);
-  $query->fields('CBT', ['name']);
-  $query->innerJoin($source_entity_table, 'SET', 'SET.record_id = CBT.' . $source_bundle->data_table . '_id');
-  $query->innerJoin($type_linker_table, 'CLT', 'CBT.' . $source_bundle->data_table . '_id = CLT.' . $source_bundle->data_table . '_id');
-  $query->leftJoin($destination_entity_table, 'DET', 'SET.record_id = DET.record_id');
-  $query->condition('CLT.' . $type_column, $type_id);
-  $query->condition('CLT.value', $type_value);
-  $query->condition('DET.record_id', NULL, 'IS');
-  $results = $query->execute()->fetchAll();
+  $type_linker_table = NULL;
+
+  if (!$destination_bundle->type_linker_table && $destination_bundle->type_column) {
+    //this is a type_id column situation, not a linker table situation
+    $query = db_select($source_table, 'CBT');
+    $query->fields('SET', ['record_id', 'entity_id']);
+    $query->fields('CBT', ['name']);
+    $query->innerJoin($source_entity_table, 'SET', 'SET.record_id = CBT.' . $source_bundle->data_table . '_id');
+    $query->leftJoin($destination_entity_table, 'DET', 'SET.record_id = DET.record_id');
+    $query->condition('CBT.' . $type_column, $type_id);
+    $query->condition('DET.record_id', NULL, 'IS');
+    $results = $query->execute()->fetchAll();
+  }
+  elseif ($destination_bundle->type_linker_table && $destination_bundle->type_column && $destination_bundle->type_value) {
+    //This is a linker table type transmutation
+    $type_linker_table = "chado." . $destination_bundle->type_linker_table; //CLT CHADO LINKER TABLE
+
+    //TODO:  Joining on the data_table_id is risky.  This works for analysis but which ones does it fail on?
+    //note: I could use the get_schema() to figure out the primary key
+    //TODO:  CBT.name: is this fair?  What can I get that's relaiably human readable?
+    $query = db_select($source_table, 'CBT');
+    $query->fields('SET', ['record_id', 'entity_id']);
+    $query->fields('CBT', ['name']);
+    $query->innerJoin($source_entity_table, 'SET', 'SET.record_id = CBT.' . $source_bundle->data_table . '_id');
+    $query->innerJoin($type_linker_table, 'CLT', 'CBT.' . $source_bundle->data_table . '_id = CLT.' . $source_bundle->data_table . '_id');
+    $query->leftJoin($destination_entity_table, 'DET', 'SET.record_id = DET.record_id');
+    $query->condition('CLT.' . $type_column, $type_id);
+    $query->condition('CLT.value', $type_value);
+    $query->condition('DET.record_id', NULL, 'IS');
+    $results = $query->execute()->fetchAll();
+
+  }
+  else {
+    tripal_set_message("destination bundle is not properly set.", TRIPAL_ERROR);
+    return;
+  }
 
   $rows = [];
 
@@ -280,21 +291,19 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
   ];
 
   return $table;
+
 }
 
 
 function tripal_alchemist_build_choosable_table($form, $source_bundle) {
 
-  // What we want to do is
-  // * Pull all the **source**  bundle entities
-  // * Build a checkbox table with each entity
   //TODO this would be much better if it was searchable by property or anything really...
 
   $source_table = "chado." . $source_bundle->data_table;//CBT  CHADO BASE TABLE
   $source_entity_table = "public.chado_" . $source_bundle->name; //SET SOURCE ENTITY TABLE
 
+  $type_linker_table = NULL;
 
-  //TODO:  Based on the above values, we need to modify the SQL to select from a type_id column or from a linker table.
   //TODO:  Joining on the data_table_id is risky.  This works for analysis but which ones does it fail on?
   //TODO:  CBT.name: is this fair?  What can I get that's relaiably human readable?
   $query = db_select($source_table, 'CBT');
