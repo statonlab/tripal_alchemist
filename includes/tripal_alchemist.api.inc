@@ -133,41 +133,59 @@ function tripal_alchemist_get_matching_bundles($source_table) {
 function tripal_alchemist_convert_all_entities($args) {
   $source_bundle = $args['source_bundle'];
   $destination_bundle = $args['destination_bundle'];
-
-  if (!$source_bundle || !$destination_bundle) {
-    tripal_set_message("Error: Destination and source bundle not provided.  Cannot convert entities without source and destination bundles.", TRIPAL_ERROR);
-  }
-
   $descriminating_type_cvterm_id = $destination_bundle->type_id;
   $descriminating_prop_value = $destination_bundle->type_value;
   $type_column = $destination_bundle->type_column;
-
   $source_bundle_table = "public.chado_" . $source_bundle->name;
-
   $destination_term = $destination_bundle->term_id;
   $destination_table = "public.chado_" . $destination_bundle->name;
-
   $chado_base_table = "chado." . $source_bundle->data_table;
   $chado_prop_table = $chado_base_table . "prop";
 
   //TODO:  add any hard-coded exceptions here since we guess the primary record column
   $base_record_column = $source_bundle->data_table . "_id";
 
+  if (!$source_bundle || !$destination_bundle) {
+    tripal_set_message("Error: Destination and source bundle not provided.  Cannot convert entities without source and destination bundles.", TRIPAL_ERROR);
+  }
 
-  //db_escape_string wont work, not in drupal 7.
-  //https://api.drupal.org/api/drupal/includes!database!database.inc/function/db_escape_field/7.x
+  $type_linker_table = NULL;
+
+  if (!$destination_bundle->type_linker_table && $destination_bundle->type_column) {
+    //this is a type_id column situation, not a linker table situation
+
+
+    //copy the entity over from source to destination
+
+    $type_id = $destination_bundle->type_id;
+    $query = db_select($chado_base_table, 'CBT');
+    $query->fields('SET', ['record_id', 'entity_id']);
+    $query->fields('CBT', ['name']);
+    $query->innerJoin($source_bundle_table, 'SET', 'SET.record_id = CBT.' . $source_bundle->data_table . '_id');
+    $query->leftJoin($destination_table, 'DET', 'SET.record_id = DET.record_id');
+    $query->condition('CBT.' . $type_column, $type_id);
+    $query->condition('DET.record_id', NULL, 'IS');
+    $results = $query->execute()->fetchAll();
+
+    //Update the tripal_entity table
+
+    // Delete the old entities, but only if they are present in the destination table
+
+
+
+  }
+
   //Need to use query builder instead
   //on conflict will ignore duplicate insert attempts from, say, migrating 2x and resulting in duplicate id's
 
-
   //TODO:  UPDATE THIS TO MODERN QUERY BUILDER, SEE FORM
   //copy the entity over from source to destination
-  $sql = "INSERT INTO " . $destination_table . " (entity_id, record_id)
-          (SELECT AB.entity_id AS entity_id, AB.record_id AS record_id FROM " . $chado_base_table . "  A
-          INNER JOIN  " . $chado_prop_table . " AP  ON A." . db_escape_field($base_record_column) . " = AP. " . ($base_record_column) . "
-          INNER JOIN chado.cvterm CVT ON AP." . ($type_column) . " = CVT.cvterm_id
-          INNER JOIN  " . $source_bundle_table . " AB ON A." . ($base_record_column) . " = AB.record_id
-          LEFT JOIN  " . $destination_table . " DT ON A." . $base_record_column . " = DT.record_id
+  $sql = "INSERT INTO " . db_escape_table($destination_table) . " (entity_id, record_id)
+          (SELECT AB.entity_id AS entity_id, AB.record_id AS record_id FROM " . db_escape_table($chado_base_table) . "  A
+          INNER JOIN  " . db_escape_table($chado_prop_table) . " AP  ON A." . db_escape_field($base_record_column) . " = AP. " . db_escape_field($base_record_column) . "
+          INNER JOIN chado.cvterm CVT ON AP." . db_escape_field($type_column) . " = CVT.cvterm_id
+          INNER JOIN  " . db_escape_table($source_bundle_table) . " AB ON A." . ($base_record_column) . " = AB.record_id
+          LEFT JOIN  " . db_escape_table($destination_table) . " DT ON A." . db_escape_field($base_record_column) . " = DT.record_id
           WHERE CVT.cvterm_id = :cvterm_id 
             AND AP.value = :descrim_prop_value 
             AND DT.record_id IS NULL)";
@@ -279,7 +297,8 @@ function tripal_alchemist_convert_select_entities($args) {
     try {
       $result = db_insert($destination_table)
         ->fields(['entity_id' => $entity_id, 'record_id' => $record_id])
-        ->execute();    } catch (Exception $e) {
+        ->execute();
+    } catch (Exception $e) {
       // ignored
     }
 
@@ -297,8 +316,8 @@ function tripal_alchemist_convert_select_entities($args) {
     //TODO: CHECK THAT IT WAS SUCCESFUL BEFORE DELETING
     $result = db_delete($source_bundle_table)
       ->condition('entity_id', $entity_id)
-    ->condition('record_id' , $record_id)
-    ->execute();
+      ->condition('record_id', $record_id)
+      ->execute();
   }
 
 }
