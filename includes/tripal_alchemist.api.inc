@@ -189,6 +189,12 @@ AND AP.value = :descrim_prop_value)";
     ]);
   }
 
+/**
+ * Given a source/destination bundle object, and an array of entity id's to convert, convert from source to destination
+ *
+ * @param $args
+ *
+ */
   function tripal_alchemist_convert_select_entities($args) {
 
     $source_bundle = $args['source_bundle'];
@@ -285,7 +291,6 @@ AND AP.value = :descrim_prop_value)";
     }
   }
 
-
   /**
    * Given a bundle object, count the number of entries for that bundle.
    *
@@ -302,23 +307,17 @@ AND AP.value = :descrim_prop_value)";
   }
 
 
-  //function tripal_alchemist_fetch_elligible_bundle_entities() {
-  //
-  //}
-
+/**
+ * Given a bundle ID, return the bundle info in the tripal_bundle table
+ *
+ * @param $bundle_id
+ *
+ * @return mixed
+ */
   function function_tripal_alchemist_get_bundle($bundle_id) {
 
 
     $query = "SELECT TB.name, TB.label FROM public.tripal_bundle TB WHERE TB.id = :bundle_id";
     $result = db_query($query, [':bundle_id' => $bundle_id])->fetchObject();
     return $result;
-  }
-
-  function tripal_alchemist_get_all_entities_from_bundle($bundle) {
-
-    $base_table = $bundle->table;
-    $tb_table = "chado_" . $bundle->name;
-
-    $query = db_select($tb_table, 'tb');
-
   }

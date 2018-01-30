@@ -27,7 +27,9 @@ function tripal_alchemist_menu() {
     'page arguments' => ['tripal_alchemist_converter_form'],
     'file' => 'includes/tripal_alchemist_converter.form.inc',
     'file_path' => drupal_get_path('module', 'tripal_alchemist'),
+    'type' => MENU_CALLBACK
   ];
+
 
   return $items;
 

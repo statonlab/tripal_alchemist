@@ -139,20 +139,9 @@ function tripal_alchemist_converter_form($form, &$form_state) {
   $transmutation_type = $form_state['values']['transmutation_type'];
 
   if ($transmutation_type == 'Automatic') {
-    $table = tripal_alchemist_build_transaction_table($source_bundle, $destination_bundle);
 
-    if (!$table) {
-      $form['div2']['kill'] = ['#markup' => '<p>No qualifying entries.  Please pick another source or destination table.</p>'];
-      return $form;
-    }
-    $markup = '<h3>Qualifying Entities</h3><p>Entities from the source bundle that meet the Destination bundle storage criteria are listed below.</p><p><b>ALL</b> of the below entities will be transformed into the destination entity bundle type.  Future versions of Tripal Alchemist will allow transforming select entities or overwriting properties.</p>';
+    $form = tripal_alchemist_build_transaction_table($form, $source_bundle, $destination_bundle);
 
-    $markup .= theme('table', $table);
-
-    $form['div2']['transaction_summary'] = [
-      '#type' => 'markup',
-      '#markup' => $markup,
-    ];
   }
 
   //if manual, we're going to do instead build a checkbox table
@@ -221,7 +210,7 @@ function tripal_alchemist_destination_bundle_callback($form) {
  *
  * @return array|null
  */
-function tripal_alchemist_build_transaction_table($source_bundle, $destination_bundle) {
+function tripal_alchemist_build_transaction_table($form, $source_bundle, $destination_bundle) {
 
   // What we want to do is a) Pull all the **source**  bundle entities
   // and look at how many of those qualify for the destination bundle.
@@ -270,13 +259,21 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
   }
 
   $rows = [];
+  $overflow = false;
+  $result_count = 0;
 
   foreach ($results as $result) {
+
+    if ($result_count > 10) {
+      $overflow = true;
+      break;
+    }
     $rows[] = [
       $result->record_id,
       $result->entity_id,
       $result->name,
     ];
+    $result_count ++;
   }
 
   if (!$rows) {
@@ -290,8 +287,20 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
     'rows' => $rows,
   ];
 
-  return $table;
+  if (!$table) {
+    $form['div2']['kill'] = ['#markup' => '<p>No qualifying entries.  Please pick another source or destination table.</p>'];
+    return $form;
+  }
+  $markup = "<h3>Qualifying Entities</h3><p>There are {$result_count} entities that can be automatically converted from the source bundle to the destination bundle. Up to the first 10 are listed below.</p><p><b>ALL</b> {$result_count} entities will be transformed into the destination entity bundle type.</p>";
 
+  $markup .= theme('table', $table);
+
+  $form['div2']['transaction_summary'] = [
+    '#type' => 'markup',
+    '#markup' => $markup,
+  ];
+
+return ($form);
 }
 
 
@@ -310,27 +319,41 @@ function tripal_alchemist_build_choosable_table($form, $source_bundle) {
   $query->fields('SET', ['record_id', 'entity_id']);
   $query->fields('CBT', ['name']);
   $query->innerJoin($source_entity_table, 'SET', 'SET.record_id = CBT.' . $source_bundle->data_table . '_id');
-  $results = $query->execute()->fetchAll();
+   $results = $query->execute()->fetchAll();
 
   $rows = [];
-
+$count = 0;
+$overflow = false;
   foreach ($results as $result) {
+    if ($count > 500) {
+      $overflow = true;
+      break;
+    }
     $rows[$result->entity_id] = [
       'record_id' => $result->record_id,
       'entity_id' => $result->entity_id,
       'name' => $result->name,
     ];
+    $count++;
   }
 
   if (!$rows) {
     return NULL;
   }
 
+
   $headers = [
     'record_id' => t('Record ID'),
     'entity_id' => t('Entity ID'),
     'name' => t('Name'),
   ];
+
+  if ($overflow){
+    $form['div2']['overflow'] = [//track if we've broken our table limit
+      '#markup' => '<p>There were over 500 possible entities to convert.  You can convert the entries that appear in the below table: to convert others, please change the type property in the database and use the automatic converter.</p>',
+    ];
+  }
+
 
   $form['div2']['manual_entity_select'] = [
     '#type' => 'tableselect',
