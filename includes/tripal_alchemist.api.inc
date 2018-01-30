@@ -189,7 +189,6 @@ AND AP.value = :descrim_prop_value)";
     ]);
   }
 
-
   function tripal_alchemist_convert_select_entities($args) {
 
     $source_bundle = $args['source_bundle'];
@@ -237,19 +236,16 @@ AND AP.value = :descrim_prop_value)";
         tripal_report_error("Could not retrieve record id for entity $entity_id.  Aborting.", TRIPAL_ERROR);
       }
 
-      if ($linker_type === "table") {
+      //first update property
+      if ($linker_type === "column") {
+        //type column.
 
-        $record = ['table' => $source_bundle->data_table, 'id' => $record_id];
-        $update_values = [
-          $type_column => [
-            'cv_id' => $descriminating_type_cvterm_id,
-          ],
-        ];
+        $result = db_update($chado_base_table)
+          ->fields([$type_column => $descriminating_type_cvterm_id
+          ])
+          ->condition($source_bundle->data_table . '_id', $record_id, '=')
+          ->execute();
 
-        if (!chado_update_record($record, $update_values)) {
-          tripal_report_error("Could not update property for entity $entity_id.  Aborting.", TRIPAL_ERROR);
-          return;
-        }
       }
       else {
         //linker column
@@ -261,19 +257,17 @@ AND AP.value = :descrim_prop_value)";
 
         $options = ['update_if_present' => TRUE];
         if (!chado_insert_property($record, $property, $options)) {
-          tripal_report_error("Could not update property for entity $entity_id.  Aborting.", TRIPAL_ERROR);
+          tripal_report_error("Tripal_alchemist", TRIPAL_ERROR, "Could not update property for entity $entity_id.  Aborting.");
           return;
         }
       }
       //insert into the destination table
-      //Ignore duplicates
       try {
         $result = db_insert($destination_table)
           ->fields(['entity_id' => $entity_id, 'record_id' => $record_id])
           ->execute();
       } catch (Exception $e) {
       }
-
       //update the tripal entity table
       $result = db_update("public.tripal_entity")
         ->fields([
@@ -282,7 +276,6 @@ AND AP.value = :descrim_prop_value)";
         ])
         ->condition('id', $entity_id, '=')
         ->execute();
-
       //delete from source
       //TODO: CHECK THAT IT WAS SUCCESSFUL BEFORE DELETING
       $result = db_delete($source_bundle_table)
