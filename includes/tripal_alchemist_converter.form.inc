@@ -84,7 +84,6 @@ function tripal_alchemist_converter_form($form, &$form_state) {
 
   $source_count = tripal_alchemist_fetch_current_bundle_entities($source_bundle);
 
-
   if (!$source_count) {
     $form['div1']['feedback'] = [
       '#markup' => "<p>Your selected source bundle <b>$source_bundle->label</b> has <b>no entities</b> in the database.  You must populate the source bundle first, either by creating content or migrating Tripal 2 nodes.</p>",
@@ -105,9 +104,7 @@ function tripal_alchemist_converter_form($form, &$form_state) {
     ];
 
     return $form;
-
   }
-
 
   $form['div1']['destination_bundle'] = [
     '#type' => 'select',
@@ -234,8 +231,6 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
   $type_column = $destination_bundle->type_column;
   $type_id = $destination_bundle->type_id;
   $type_value = $destination_bundle->type_value;
-
-  dpm($source_bundle);
 
   $type_linker_table = NULL;
 
