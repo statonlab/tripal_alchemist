@@ -232,6 +232,8 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
   $source_entity_table = "public.chado_" . $source_bundle->name; //SET SOURCE ENTITY TABLE
   $destination_entity_table = "public.chado_" . $destination_bundle->name;
 
+  dpm($source_bundle);
+
   $type_linker_table = NULL;
 
   if (!$destination_bundle->type_linker_table && $destination_bundle->type_column) {
