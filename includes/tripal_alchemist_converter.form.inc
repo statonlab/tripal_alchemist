@@ -231,6 +231,9 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
   $source_table = "chado." . $source_bundle->data_table;//CBT  CHADO BASE TABLE
   $source_entity_table = "public.chado_" . $source_bundle->name; //SET SOURCE ENTITY TABLE
   $destination_entity_table = "public.chado_" . $destination_bundle->name;
+  $type_column = $destination_bundle->type_column;
+  $type_id = $destination_bundle->type_id;
+  $type_value = $destination_bundle->type_value;
 
   dpm($source_bundle);
 
@@ -238,8 +241,6 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
 
   if (!$destination_bundle->type_linker_table && $destination_bundle->type_column) {
     //this is a type_id column situation, not a linker table situation
-    $type_column = $destination_bundle->type_column;
-    $type_id = $destination_bundle->type_id;
     $query = db_select($source_table, 'CBT');
     $query->fields('SET', ['record_id', 'entity_id']);
     $query->fields('CBT', ['name']);
@@ -252,9 +253,6 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
   elseif ($destination_bundle->type_linker_table && $destination_bundle->type_column && $destination_bundle->type_value) {
     //This is a linker table type transmutation
     $type_linker_table = "chado." . $destination_bundle->type_linker_table; //CLT CHADO LINKER TABLE
-    $type_column = $destination_bundle->type_column;
-    $type_id = $destination_bundle->type_id;
-    $type_value = $destination_bundle->type_value;
 
     //TODO:  Joining on the data_table_id is risky.  This works for analysis but which ones does it fail on?
     //note: I could use the get_schema() to figure out the primary key

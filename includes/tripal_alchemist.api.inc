@@ -98,7 +98,6 @@ function tripal_alchemist_convert_all_entities($args) {
     //Update the tripal_entity table
 
 
-
     //TODO
     // Delete the old entities, but only if they are present in the destination table
 
@@ -167,7 +166,6 @@ function tripal_alchemist_convert_select_entities($args) {
   $destination_bundle = $args['destination_bundle'];
   $source_entities = $args['source_entities'];
 
-
   if (!$source_bundle || !$destination_bundle) {
     tripal_set_message("Error: Destination and source bundle not provided.  Cannot convert entities without source and destination bundles.", TRIPAL_ERROR);
   }
@@ -198,17 +196,19 @@ function tripal_alchemist_convert_select_entities($args) {
 
   $chado_entity_table = chado_get_bundle_entity_table($source_bundle);
 
-  if ($linker_type === "table") {
-    foreach ($source_entities as $entity_id) {
-      $record_id = db_select($chado_entity_table, 'CE')
-        ->fields('CE', ['record_id'])
-        ->condition('CE.entity_id', $entity_id)
-        ->execute()
-        ->fetchField();
+  foreach ($source_entities as $entity_id) {
+    $record_id = db_select($chado_entity_table, 'CE')
+      ->fields('CE', ['record_id'])
+      ->condition('CE.entity_id', $entity_id)
+      ->execute()
+      ->fetchField();
 
-      if (!$record_id) {
-        tripal_report_error("Could not retrieve record id for entity $entity_id.  Aborting.", TRIPAL_ERROR);
-      }
+    if (!$record_id) {
+      tripal_report_error("Could not retrieve record id for entity $entity_id.  Aborting.", TRIPAL_ERROR);
+    }
+
+    if ($linker_type === "table") {
+
       $record = ['table' => $source_bundle->data_table, 'id' => $record_id];
       $update_values = [
         $type_column => [
@@ -220,22 +220,9 @@ function tripal_alchemist_convert_select_entities($args) {
         tripal_report_error("Could not update property for entity $entity_id.  Aborting.", TRIPAL_ERROR);
         return;
       }
-
     }
-  }
-  else {
-    //We're a linker column
-    foreach ($source_entities as $entity_id) {
-      $record_id = db_select($chado_entity_table, 'CE')
-        ->fields('CE', ['record_id'])
-        ->condition('CE.entity_id', $entity_id)
-        ->execute()
-        ->fetchField();
-
-      if (!$record_id) {
-        tripal_report_error("Could not retrieve record id for entity $entity_id.  Aborting.", TRIPAL_ERROR);
-      }
-
+    else {
+      //linker column
       $record = ['table' => $source_bundle->data_table, 'id' => $record_id];
       $property = [
         $type_column => $descriminating_type_cvterm_id,
@@ -243,42 +230,36 @@ function tripal_alchemist_convert_select_entities($args) {
       ];
 
       $options = ['update_if_present' => TRUE];
-
       if (!chado_insert_property($record, $property, $options)) {
         tripal_report_error("Could not update property for entity $entity_id.  Aborting.", TRIPAL_ERROR);
         return;
       }
     }
-  }
+    //insert into the destination table
+    //Ignore duplicates
+    try {
+      $result = db_insert($destination_table)
+        ->fields(['entity_id' => $entity_id, 'record_id' => $record_id])
+        ->execute();
+    } catch (Exception $e) {
+    }
 
-
-  //insert into the destination table
-  //Ignore duplicates
-  try {
-    $result = db_insert($destination_table)
-      ->fields(['entity_id' => $entity_id, 'record_id' => $record_id])
+    //update the tripal entity table
+    $result = db_update("public.tripal_entity")
+      ->fields([
+        'bundle' => $destination_bundle->name,
+        'term_id' => $destination_term,
+      ])
+      ->condition('id', $entity_id, '=')
       ->execute();
-  } catch (Exception $e) {
-    // ignored
+
+    //delete from source
+    //TODO: CHECK THAT IT WAS SUCCESSFUL BEFORE DELETING
+    $result = db_delete($source_bundle_table)
+      ->condition('entity_id', $entity_id)
+      ->condition('record_id', $record_id)
+      ->execute();
   }
-
-  //update the tripal entity table
-
-  $result = db_update("public.tripal_entity")
-    ->fields([
-      'bundle' => $destination_bundle->name,
-      'term_id' => $destination_term,
-    ])
-    ->condition('id', $entity_id, '=')
-    ->execute();
-
-  //delete from source
-  //TODO: CHECK THAT IT WAS SUCCESFUL BEFORE DELETING
-  $result = db_delete($source_bundle_table)
-    ->condition('entity_id', $entity_id)
-    ->condition('record_id', $record_id)
-    ->execute();
-
 }
 
 
