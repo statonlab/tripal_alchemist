@@ -145,7 +145,7 @@ function tripal_alchemist_converter_form($form, &$form_state) {
       $form['div2']['kill'] = ['#markup' => '<p>No qualifying entries.  Please pick another source or destination table.</p>'];
       return $form;
     }
-    $markup = '<h3>Qualifying Entities</h3><p>Entities from the source bundle that meet the Destination bundle storage criteria are listed below.</p><p><b>ALL</b> of the below entities will be transformed into the destination entity bundle type.  Future versions of Tripal Alchemist will allow transforming select entities or overwriting properties.</p>';
+    $markup = '<h3>Qualifying Entities</h3><p>The first 10 Entities from the source bundle that meet the Destination bundle storage criteria are listed below.</p><p><b>ALL</b> of the qualifying entities will be transformed into the destination entity bundle type.</p>';
 
     $markup .= theme('table', $table);
 
@@ -271,12 +271,21 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
 
   $rows = [];
 
+  $result_count = 0;
+  $overflow = FALSE;
+
   foreach ($results as $result) {
+    if ($result_count > 10) {
+      $overflow = TRUE;
+      break;
+    }
     $rows[] = [
       $result->record_id,
       $result->entity_id,
       $result->name,
     ];
+    $result_count++;
+
   }
 
   if (!$rows) {
@@ -314,12 +323,21 @@ function tripal_alchemist_build_choosable_table($form, $source_bundle) {
 
   $rows = [];
 
+  $result_count = 0;
+  $overflow = FALSE;
+
   foreach ($results as $result) {
+
+    if ($result_count > 500) {
+      $overflow = TRUE;
+      break;
+    }
     $rows[$result->entity_id] = [
       'record_id' => $result->record_id,
       'entity_id' => $result->entity_id,
       'name' => $result->name,
     ];
+    $result_count++;
   }
 
   if (!$rows) {
@@ -332,6 +350,10 @@ function tripal_alchemist_build_choosable_table($form, $source_bundle) {
     'name' => t('Name'),
   ];
 
+  $form['div2']['overflow'] = [
+    '#markdown' => '<p>Warning: over 500 qualifying entities, only the first 500 are    displayed below. You can still manually select from this table.  To convert more entities, please set the type property and use the automatic converter.
+</p>',
+  ];
   $form['div2']['manual_entity_select'] = [
     '#type' => 'tableselect',
     '#header' => $headers,
