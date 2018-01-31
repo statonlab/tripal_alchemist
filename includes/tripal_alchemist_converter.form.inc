@@ -2,8 +2,6 @@
 
 function tripal_alchemist_converter_form($form, &$form_state) {
 
-  // Fetch all bundles
-
   $all_bundles_object = tripal_alchemist_get_all_bundles();
 
   $all_bundles_array = [];
@@ -24,21 +22,6 @@ function tripal_alchemist_converter_form($form, &$form_state) {
         ',
   ];
 
-  $form['source_bundle'] = [
-    '#type' => 'select',
-    '#title' => t('Source Bundle'),
-    '#description' => t('The source bundle, which contains the entities you would like to transform.'),
-    '#empty_option' => t('- Select -'),
-    '#options' => $bundle_options,
-    '#default_value' => NULL,
-    '#ajax' => [
-      'callback' => 'tripal_alchemist_source_bundle_callback',
-      'wrapper' => 'destination_bundle_wrapper',
-      'effect' => 'fade',
-    ],
-  ];
-
-
   $form['transmutation_type'] = [
     '#type' => 'radios',
     '#title' => 'Transmutation Method',
@@ -50,8 +33,23 @@ function tripal_alchemist_converter_form($form, &$form_state) {
     ],
     '#default_value' => 'Automatic',
     '#ajax' => [
-      'callback' => 'tripal_alchemist_destination_bundle_callback',
-      'wrapper' => 'report_on_migrations_wrapper',
+      'callback' => 'tripal_alchemist_source_bundle_callback',
+      'wrapper' => 'div1_wrapper',
+      'effect' => 'fade',
+    ],
+  ];
+
+
+  $form['source_bundle'] = [
+    '#type' => 'select',
+    '#title' => t('Source Bundle'),
+    '#description' => t('The source bundle, which contains the entities you would like to transform.'),
+    '#empty_option' => t('- Select -'),
+    '#options' => $bundle_options,
+    '#default_value' => NULL,
+    '#ajax' => [
+      'callback' => 'tripal_alchemist_source_bundle_callback',
+      'wrapper' => 'div1_wrapper',
       'effect' => 'fade',
     ],
   ];
@@ -60,14 +58,14 @@ function tripal_alchemist_converter_form($form, &$form_state) {
   $form['div1'] = [
     '#type' => 'fieldset',
     '#collapsible' => FALSE,
-    '#prefix' => '<div id="destination_bundle_wrapper">',
+    '#prefix' => '<div id="div1_wrapper">',
     '#suffix' => '</div>',
   ];
 
   $form['div2'] = [
     '#type' => 'fieldset',
     '#collapsible' => FALSE,
-    '#prefix' => '<div id="report_on_migrations_wrapper">',
+    '#prefix' => '<div id="div2_wrapper">',
     '#suffix' => '</div>',
   ];
 
@@ -119,7 +117,7 @@ function tripal_alchemist_converter_form($form, &$form_state) {
     '#options' => $matching_destination_bundles,
     '#ajax' => [
       'callback' => 'tripal_alchemist_destination_bundle_callback',
-      'wrapper' => 'report_on_migrations_wrapper',
+      'wrapper' => 'div2_wrapper',
       'effect' => 'fade',
     ],
   ];
@@ -133,14 +131,9 @@ function tripal_alchemist_converter_form($form, &$form_state) {
     ];
     return $form;
   }
-
   $destination_bundle = $all_bundles_array[$selected_destination];
 
-  //User can either let alchemist automatically convert entities that have properties already set
-  // OR user can view list of entities and manually select those that match.
-  //TODO: third option: filter by a source bundle property/value pair
-
-  $transmutation_type = $form_state['values']['transmutation_type'];
+  $transmutation_type = $form_state['values']['transmutation_type'];//expect automatic, manual, collection
 
   if ($transmutation_type == 'Automatic') {
     $table = tripal_alchemist_build_transaction_table($source_bundle, $destination_bundle);
@@ -210,9 +203,9 @@ function tripal_alchemist_converter_form_submit($form, &$form_state) {
 
   }
 
-  if ($transmutation_type == 'Collections'){
-
-   $collection = $form_state['values']['collection'];
+  if ($transmutation_type == 'Collections') {
+    $collection_id = $form_state['values']['collection'];
+    $collection = tripal_get_collection(["collection_id" => $collection_id]);
     $job_args['collection'] = $collection;
 
     tripal_alchemist_convert_select_entities($job_args);
@@ -221,13 +214,120 @@ function tripal_alchemist_converter_form_submit($form, &$form_state) {
 
 }
 
-
 function tripal_alchemist_source_bundle_callback($form) {
   return $form['div1'];
+
 }
 
 function tripal_alchemist_destination_bundle_callback($form) {
   return $form['div2'];
+}
+
+function tripal_alchemist_build_choosable_table($form, $source_bundle) {
+
+  //TODO this would be much better if it was searchable by property or anything really...
+
+  $source_table = "chado." . $source_bundle->data_table;//CBT  CHADO BASE TABLE
+  $source_entity_table = "public.chado_" . $source_bundle->name; //SET SOURCE ENTITY TABLE
+
+  $type_linker_table = NULL;
+
+  //TODO:  Joining on the data_table_id is risky.  This works for analysis but which ones does it fail on?
+  //TODO:  CBT.name: is this fair?  What can I get that's relaiably human readable?
+  $query = db_select($source_table, 'CBT');
+  $query->fields('SET', ['record_id', 'entity_id']);
+  $query->fields('CBT', ['name']);
+  $query->innerJoin($source_entity_table, 'SET', 'SET.record_id = CBT.' . $source_bundle->data_table . '_id');
+  $results = $query->execute()->fetchAll();
+
+  $rows = [];
+
+  $result_count = 0;
+  $overflow = FALSE;
+
+  foreach ($results as $result) {
+
+    if ($result_count > 500) {
+      $overflow = TRUE;
+      break;
+    }
+    $rows[$result->entity_id] = [
+      'record_id' => $result->record_id,
+      'entity_id' => $result->entity_id,
+      'name' => $result->name,
+    ];
+    $result_count++;
+  }
+
+  if (!$rows) {
+    return NULL;
+  }
+
+  $headers = [
+    'record_id' => t('Record ID'),
+    'entity_id' => t('Entity ID'),
+    'name' => t('Name'),
+  ];
+
+  $form['div2']['overflow'] = [
+    '#markdown' => '<p>Warning: over 500 qualifying entities, only the first 500 are    displayed below. You can still manually select from this table.  To convert more entities, please set the type property and use the automatic converter.
+</p>',
+  ];
+  $form['div2']['manual_entity_select'] = [
+    '#type' => 'tableselect',
+    '#header' => $headers,
+    '#options' => $rows,
+    '#empty' => t('The source bundle is empty'),
+  ];
+
+  return ($form);
+}
+
+function tripal_alchemist_provide_collection_list($form, $source_bundle) {
+  global $user;
+  $collections = tripal_get_user_collections($user->uid);
+  if (count($collections) === 0) {
+    $form['div2']['no_collection'] = [
+      '#markup' => "<h3>No Collections available</h3><p>You do not currently have any collections.  Please create a collection of entities you would like to convert.</p>",
+    ];
+    return $form;
+  }
+
+  $options = [];
+  foreach ($collections as $collection) {
+    $entities = $collection->getEntityIDs();
+
+    $matching_entities = [];
+    foreach ($entities as $entity) {
+      $source_entity_table = "public.chado_" . $source_bundle->name; //SET SOURCE ENTITY TABLE
+      $query = db_select($source_entity_table, 'SET')
+        ->condition('SET.entity_id', $entity, "=");
+      $result = $query->execute()->fetchAll();
+      if ($result) {
+        $matching_entities[] = $entity;
+      }
+    }
+    $num_entities = count($entities);
+    $num_matching_entities = count($matching_entities);
+    $collection_name = $collection->getName();
+    $collection_id = $collection->getCollectionID();
+    if ($num_matching_entities > 0) {
+      $options[$collection_id] = [
+        $collection_id => t("$collection_name ($num_matching_entities of $num_entities eligible)"),
+      ];
+    }
+  }//end collection loop
+
+  $form['div2']['collection'] = [
+    '#type' => 'select',
+    '#title' => t('Available Collections'),
+    '#description' => t('Collections.  Alchemist will convert all eligible entities in a collection form the source bundle to the destination bundle.'),
+    '#default' => NULL,
+    '#empty_option' => t('- Select -'),
+    '#options' => $options,
+  ];
+
+  return $form;
 }
 
 
@@ -322,85 +422,3 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
 
 }
 
-
-function tripal_alchemist_build_choosable_table($form, $source_bundle) {
-
-  //TODO this would be much better if it was searchable by property or anything really...
-
-  $source_table = "chado." . $source_bundle->data_table;//CBT  CHADO BASE TABLE
-  $source_entity_table = "public.chado_" . $source_bundle->name; //SET SOURCE ENTITY TABLE
-
-  $type_linker_table = NULL;
-
-  //TODO:  Joining on the data_table_id is risky.  This works for analysis but which ones does it fail on?
-  //TODO:  CBT.name: is this fair?  What can I get that's relaiably human readable?
-  $query = db_select($source_table, 'CBT');
-  $query->fields('SET', ['record_id', 'entity_id']);
-  $query->fields('CBT', ['name']);
-  $query->innerJoin($source_entity_table, 'SET', 'SET.record_id = CBT.' . $source_bundle->data_table . '_id');
-  $results = $query->execute()->fetchAll();
-
-  $rows = [];
-
-  $result_count = 0;
-  $overflow = FALSE;
-
-  foreach ($results as $result) {
-
-    if ($result_count > 500) {
-      $overflow = TRUE;
-      break;
-    }
-    $rows[$result->entity_id] = [
-      'record_id' => $result->record_id,
-      'entity_id' => $result->entity_id,
-      'name' => $result->name,
-    ];
-    $result_count++;
-  }
-
-  if (!$rows) {
-    return NULL;
-  }
-
-  $headers = [
-    'record_id' => t('Record ID'),
-    'entity_id' => t('Entity ID'),
-    'name' => t('Name'),
-  ];
-
-  $form['div2']['overflow'] = [
-    '#markdown' => '<p>Warning: over 500 qualifying entities, only the first 500 are    displayed below. You can still manually select from this table.  To convert more entities, please set the type property and use the automatic converter.
-</p>',
-  ];
-  $form['div2']['manual_entity_select'] = [
-    '#type' => 'tableselect',
-    '#header' => $headers,
-    '#options' => $rows,
-    '#empty' => t('The source bundle is empty'),
-  ];
-
-  return ($form);
-}
-
-function tripal_alchemist_provide_collection_list($form, $source_bundle) {
-  global $user;
-  $collections = tripal_get_user_collections($user->uid);
-
-  if (count($collections) === 0) {
-    $form['div2']['no_collection'] = [
-      '#markup' => "<h3>No Collections available</h3><p>You do not currently have any collections.  Please create a collection of entities you would like to convert.</p>",
-    ];
-    return $form;
-  }
-  $form['div2']['collection'] = [
-    '#type' => 'select',
-    '#title' => t('Available Collections'),
-    '#description' => t('Collections.  Alchemist will convert all entities in a collection form the source bundle to the destination bundle.'),
-    '#default' => NULL,
-    '#empty_option' => t('- Select -'),
-    '#options' => $collections,
-  ];
-
-  return $form;
-}
