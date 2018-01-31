@@ -338,6 +338,8 @@ function tripal_alchemist_get_all_entities_from_bundle($bundle) {
 
 
 /**
+ * Given a collection object, return all entities in the collection from the source bundle.
+ *
  * @param $collection
  * @param $source_bundle
  *

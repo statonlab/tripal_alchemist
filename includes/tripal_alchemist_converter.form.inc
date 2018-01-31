@@ -17,7 +17,7 @@ function tripal_alchemist_converter_form($form, &$form_state) {
   }
 
   $form['instructions'] = [
-    '#markup' => '<p>Welcome to Tripal Alchemist. This module is designed to convert Tripal Entities from one type to another (a process called "transmutation" in clasical alchemy).  Your destination bundle must already exist before transmuting.</p><p>Please note that Tripal Alchemist will only convert <b>Tripal 3 Entities</b>.  Tripal 2 content types (nodes) must be migrated.</p>
+    '#markup' => '<p>Welcome to Tripal Alchemist. This module is designed to convert Tripal Entities from one type to another (a process called "transmutation" in classical alchemy).  Your destination bundle must already exist before transmuting.</p><p>Please note that Tripal Alchemist will only convert <b>Tripal 3 Entities</b>.  Tripal 2 content types (nodes) must be migrated.</p>
         <p>Full documentation of this module is available on <a href = "https://github.com/statonlab/tripal_alchemist/">the projects Github page.</a></p>
         ',
   ];
@@ -25,7 +25,7 @@ function tripal_alchemist_converter_form($form, &$form_state) {
   $form['transmutation_type'] = [
     '#type' => 'radios',
     '#title' => 'Transmutation Method',
-    '#description' => 'Tripal Alchemist can automatically convert all entities from a source bundle to a destination bundle, if those entities already meet the criteria for the destination bundle.  This typically means that a type_id column or property is already set.  You can instead choose to manually select entities to convert.',
+    '#description' => 'Tripal Alchemist can automatically convert all entities from a source bundle to a destination bundle, if those entities already meet the criteria for the destination bundle.  This typically means that a type_id column or property is already set.  You can instead choose to manually select entities to convert. Alternatively, you can create a collection, and convert the entities within that collection.',
     '#options' => [
       'Automatic' => 'Automatic',
       'Manual' => 'Manual',
@@ -88,7 +88,7 @@ function tripal_alchemist_converter_form($form, &$form_state) {
 
   if (!$source_count) {
     $form['div1']['feedback'] = [
-      '#markup' => "<p>Your selected source bundle <b>$source_bundle->label</b> has <b>no entities</b> in the database.  You must populate the source bundle first, either by creating content or migrating Tripal 2 nodes.</p>",
+      '#markup' => "<p>Your selected source bundle <b>$source_bundle->label</b> has <b>no entities</b> in the database.  You must populate the source bundle first, either by creating content, migrating Tripal 2 nodes, or publishing Chado content.</p>",
     ];
   }
   $form['div1']['feedback'] = [
@@ -286,12 +286,6 @@ function tripal_alchemist_build_choosable_table($form, $source_bundle) {
 function tripal_alchemist_provide_collection_list($form, $source_bundle) {
   global $user;
   $collections = tripal_get_user_collections($user->uid);
-  if (count($collections) === 0) {
-    $form['div2']['no_collection'] = [
-      '#markup' => "<h3>No Collections available</h3><p>You do not currently have any collections.  Please create a collection of entities you would like to convert.</p>",
-    ];
-    return $form;
-  }
 
   $options = [];
   foreach ($collections as $collection) {
@@ -317,6 +311,13 @@ function tripal_alchemist_provide_collection_list($form, $source_bundle) {
       ];
     }
   }//end collection loop
+
+  if (count($options) === 0) {
+    $form['div2']['no_collection'] = [
+      '#markup' => "<h3>No Collections available</h3><p>You do not currently have any collections with entities matching this source bundle.  Please create a collection of entities you would like to convert.</p>",
+    ];
+    return $form;
+  }
 
   $form['div2']['collection'] = [
     '#type' => 'select',
