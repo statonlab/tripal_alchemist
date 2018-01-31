@@ -14,9 +14,7 @@ This module is under active development, and is released as v0.1.
 
 * Transform Tripal entities from one type to another based on their existing bundle-defining property
 * Manually override entity properties and transform select elements
-* **Coming Soon** Use existing properties to transform entities that are not set for the destination bundle based on the bundle-defining property
-* **Coming Soon** Transform entities based on their `type_id`.
-
+* Trying to convert a large but specific subset of entities?  Create a collection, then convert the entities in that collection
 
 ## Usage
 **Notice:** The alchemist interface has changed: the below guide is accurate for **Automatic** conversion.  **Manual** conversion is a new feature which allows you to manually select which entities to convert, regardless of their existing properties.  The guide will be updated to reflect this for the v0.2 release.
