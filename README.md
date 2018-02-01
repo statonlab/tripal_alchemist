@@ -7,8 +7,6 @@ Tripal Alchemist allows you to **transform**  entities from one type to another.
 
 Tripal 3 provides migrations for most base Chado content types.  Some content types (namely Analysis) convert all nodes to a single bundle type.  This is not great if you make heavy use of submodules that define their own node type: in the case of analysis, this includes analysis_expression, analysis_unigene, etc.  You also might decide later down the road that you want to redefine some of your `mrna` features as `mrna_contig`, for example.
 
-In both cases, Tripal Alchemist provides a simple interface to easily convert entities from one bundle to another, provided that the destination bundle exists, has the same base table as the source bundle, and the destination bundle was defined with the `type column` and `property value` properly set.
-
 This module is under active development, and is released as v0.2.
 
 ## Features
@@ -54,6 +52,24 @@ If you are transforming a large set of entities that are not elligible for autom
 > Transforming a collection.  Creating a collection elsewhere (IE elasticsearch) allows you to easily select the entities you want to transform.
 
 Tripal Alchemist will only display collections that contain entities from the select source bundle type.
+
+## FAQ
+
+### How do I create a destination bundle type?
+
+Please check out my [guide on defining a bundle](/docs/deining_a_new_bundle.md).
+
+### How are entities converted?
+Tripal allows multiple entities to be mapped to the same base table.  It distinguishes these via a type_id, which is stored either directly in the base table, or in a connected prop table.  
+Tripal Alchemist changes those properties for you to match the selected destination bundle.  Tripal Alchemist then migrates the entities from the sosource to the destination `Chado_bio_data` table, and updates the `Tripal_Entity` table.
+
+### Why do my source and destination bundles need the same Chado base table?
+
+Alchemist only alters the type property of the underlying Chado record.  Transforming records from one Chado table to another would be difficult or impossible, as the required fields would all be different.
+
+### Can Alchemist convert entities that are not Chado entities?
+
+No.  As of the current release, Tripal Alchemist can only convert Tripal Entities with Chado storage backends.
 
 ## License and Contributing
 
