@@ -17,14 +17,14 @@ function tripal_alchemist_converter_form($form, &$form_state) {
   }
 
   $form['instructions'] = [
-    '#markup' => '<p>Welcome to Tripal Alchemist. This module is designed to convert Tripal Entities from one type to another (a process called "transmutation" in classical alchemy).  Your destination bundle must already exist before transmuting.</p><p>Please note that Tripal Alchemist will only convert <b>Tripal 3 Entities</b>.  Tripal 2 content types (nodes) must be migrated.</p>
+    '#markup' => '<p>Welcome to Tripal Alchemist. This module is designed to transform Tripal Entities from one type to another (a process called "transmutation" in classical alchemy).  Your destination bundle must already exist before transforming.</p><p>Please note that Tripal Alchemist will only convert <b>Tripal 3 Entities</b>.  Tripal 2 content types (nodes) must be migrated.</p>
         <p>Full documentation of this module is available on <a href = "https://github.com/statonlab/tripal_alchemist/">the projects Github page.</a></p>
         ',
   ];
 
   $form['transmutation_type'] = [
     '#type' => 'radios',
-    '#title' => 'Transmutation Method',
+    '#title' => 'Transformation Method',
     '#description' => 'Tripal Alchemist can automatically convert all entities from a source bundle to a destination bundle, if those entities already meet the criteria for the destination bundle.  This typically means that a type_id column or property is already set.  You can instead choose to manually select entities to convert. Alternatively, you can create a collection, and convert the entities within that collection.',
     '#options' => [
       'Automatic' => 'Automatic',
@@ -164,7 +164,7 @@ function tripal_alchemist_converter_form($form, &$form_state) {
 
   $form['div2']['submit'] = [
     '#type' => 'submit',
-    '#value' => t('Transmute (Submit)'),
+    '#value' => t('Transform (Submit)'),
   ];
 
   return $form;
@@ -192,7 +192,7 @@ function tripal_alchemist_converter_form_submit($form, &$form_state) {
 
   if ($transmutation_type == 'Automatic') {
     tripal_alchemist_convert_all_entities($job_args);
-    tripal_set_message("Transmutation successful!", TRIPAL_INFO);
+    tripal_set_message("Transformation successful!", TRIPAL_INFO);
   }
   if ($transmutation_type == 'Manual') {
     $source_entities = $form_state['values']['manual_entity_select'];
