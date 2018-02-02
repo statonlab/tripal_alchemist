@@ -1,7 +1,16 @@
 <?php
+/**
+ * Form hooks and general form helper functions (building tables etc)
+ *
+ */
 
 /**
- * Generates the Tripal ALchemist administrative form
+ * Implements hook_form to provide base Alchemist admin form.
+ *
+ * @param $form
+ * @param $form_state
+ *
+ * @return mixed
  */
 
 function tripal_alchemist_converter_form($form, &$form_state) {

@@ -1,11 +1,16 @@
 <?php
+/**
+ * API methods for Tripal Alchemist.  Some of these are module specific, others are simple helper methods for Tripal Collections or Entities.
+ */
+
 
 /**
  *   Returns an array of all bundle objects.
  *
  * @return array|bool
+ * The returned bundles array is composed of Tripal Bundle objects.
  *
- * @ingroup General_entities
+ * @ingroup General entities
  */
 function tripal_alchemist_get_all_bundles() {
 
