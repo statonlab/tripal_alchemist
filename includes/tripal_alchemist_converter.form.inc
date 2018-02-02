@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * Generates the Tripal ALchemist administrative form
+ */
+
 function tripal_alchemist_converter_form($form, &$form_state) {
 
   $all_bundles_object = tripal_alchemist_get_all_bundles();
@@ -223,6 +227,17 @@ function tripal_alchemist_destination_bundle_callback($form) {
   return $form['div2'];
 }
 
+/**
+ * Builds the chooseable table for manual transformation.
+ *
+ * @param $form
+ * @param $source_bundle
+ *
+ * @return null
+ *
+ * @ingroup Tripal_Alchemist_Form
+ */
+
 function tripal_alchemist_build_choosable_table($form, $source_bundle) {
 
   //TODO this would be much better if it was searchable by property or anything really...
@@ -283,6 +298,17 @@ function tripal_alchemist_build_choosable_table($form, $source_bundle) {
   return ($form);
 }
 
+/**
+ * Provides a list of collections that include entities within the source bundle.
+ *
+ * @param $form
+ * @param $source_bundle
+ *
+ * @return mixed
+ *
+ * @ingroup Tripal_Alchemist_form
+ */
+
 function tripal_alchemist_provide_collection_list($form, $source_bundle) {
   global $user;
   $collections = tripal_get_user_collections($user->uid);
@@ -340,6 +366,8 @@ function tripal_alchemist_provide_collection_list($form, $source_bundle) {
  * @param $destination_bundle
  *
  * @return array|null
+ *
+ * @ingroup Tripal_Alchemist_Form
  */
 function tripal_alchemist_build_transaction_table($source_bundle, $destination_bundle) {
 
