@@ -1,7 +1,7 @@
 <?php
 
 /**
- * returns an array of all bundle objects.  Requires further processing to create menu items.
+ *   Returns an array of all bundle objects.
  *
  * @return array|bool
  *
@@ -34,7 +34,7 @@ function tripal_alchemist_get_all_bundles() {
 
 
 /**
- * Get bundles that map to a particular source table
+ * Get bundles that map to a particular source table.
  *
  * @param $source_table
  *
@@ -58,10 +58,7 @@ function tripal_alchemist_get_matching_bundles($source_table) {
  * Convert all entities from one bundle type to another
  *
  *
- * @param $args
- *
- * $args is an array with teh following keys:
- *
+ * @param $args  An array with teh following keys:
  * 'source_bundle' => the source bundle.  All entities in the source will be converted.
  * 'destination_bundle' => The destination bundle.
  *
@@ -202,10 +199,11 @@ AND AP.value = :descrim_prop_value)";
 
 
 /**
- * Converts a select list of entities.  This list of entities is retrieved either as a list of entity ids, or via a collection.
+ * Converts a select list of entities.
+ *
+ * This list of entities is retrieved either as a list of entity ids, or via a collection, depending on the args passed in.
  *
  * @param $args
- *
  * An array with the following keys:
  * 'source_bundle'
  * 'destination_bundle'
@@ -332,6 +330,7 @@ function tripal_alchemist_convert_select_entities($args) {
  * @param $bundle
  *
  * @return mixed
+ *
  * @ingroup General_entities
  */
 
