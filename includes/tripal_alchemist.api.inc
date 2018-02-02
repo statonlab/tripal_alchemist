@@ -1,9 +1,11 @@
 <?php
 
-/**returns an array of all bundle objects.  Requires further processing to create menu items.
+/**
+ *   Returns an array of all bundle objects.
  *
  * @return array|bool
  *
+ * @ingroup General_entities
  */
 function tripal_alchemist_get_all_bundles() {
 
@@ -31,12 +33,14 @@ function tripal_alchemist_get_all_bundles() {
 }
 
 
-/**Get bundles that map to a particular source table
+/**
+ * Get bundles that map to a particular source table.
  *
  * @param $source_table
- * @param $all_bundles_object
  *
  * @return array
+ *
+ * @ingroup General_entities
  */
 
 function tripal_alchemist_get_matching_bundles($source_table) {
@@ -54,7 +58,11 @@ function tripal_alchemist_get_matching_bundles($source_table) {
  * Convert all entities from one bundle type to another
  *
  *
- * @param $args
+ * @param $args  An array with teh following keys:
+ * 'source_bundle' => the source bundle.  All entities in the source will be converted.
+ * 'destination_bundle' => The destination bundle.
+ *
+ * @ingroup Convert_entities
  */
 
 function tripal_alchemist_convert_all_entities($args) {
@@ -189,6 +197,23 @@ AND AP.value = :descrim_prop_value)";
   ]);
 }
 
+
+/**
+ * Converts a select list of entities.
+ *
+ * This list of entities is retrieved either as a list of entity ids, or via a collection, depending on the args passed in.
+ *
+ * @param $args
+ * An array with the following keys:
+ * 'source_bundle'
+ * 'destination_bundle'
+ * 'source_entities'
+ * 'collection'
+ *
+ * @ingroup Convert_entities
+ */
+
+
 function tripal_alchemist_convert_select_entities($args) {
 
   $source_bundle = $args['source_bundle'];
@@ -305,6 +330,8 @@ function tripal_alchemist_convert_select_entities($args) {
  * @param $bundle
  *
  * @return mixed
+ *
+ * @ingroup General_entities
  */
 
 function tripal_alchemist_fetch_current_bundle_entities($bundle) {
@@ -315,25 +342,19 @@ function tripal_alchemist_fetch_current_bundle_entities($bundle) {
 }
 
 
-//function tripal_alchemist_fetch_elligible_bundle_entities() {
-//
-//}
-
+/**
+ * Given the bundle ID, fetch the bundle name and label
+ * @param $bundle_id
+ *
+ * @return mixed
+ * @ingroup General_entities
+ */
 function function_tripal_alchemist_get_bundle($bundle_id) {
 
 
   $query = "SELECT TB.name, TB.label FROM public.tripal_bundle TB WHERE TB.id = :bundle_id";
   $result = db_query($query, [':bundle_id' => $bundle_id])->fetchObject();
   return $result;
-}
-
-function tripal_alchemist_get_all_entities_from_bundle($bundle) {
-
-  $base_table = $bundle->table;
-  $tb_table = "chado_" . $bundle->name;
-
-  $query = db_select($tb_table, 'tb');
-
 }
 
 
@@ -344,6 +365,9 @@ function tripal_alchemist_get_all_entities_from_bundle($bundle) {
  * @param $source_bundle
  *
  * @return array
+ *
+ *  @ingroup Convert_entities
+
  */
 
 function tripal_alchemist_get_eligible_entities($collection, $source_bundle){
