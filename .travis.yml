@@ -12,6 +12,6 @@ before_script:
 script:
   - docker run  -it -d --name tripal -p 8080:80 bcondon/docker_tripal3 /bin/bash
   - docker exec -it tripal echo "hello!"
-  - docker exec -it tripal cd /var/www/html/sites/all/modules/tripal_extensions && git clone https://github.com/statonlab/tripal_alchemist.git
+  - docker exec -it tripal cd /var/www/html/sites/all/modules/tripal_extensions; git clone https://github.com/statonlab/tripal_alchemist.git;
   - docker exec -it tripal drush pm-enable -y tripal_alchemist
-  - docker exec -it tripal cd /var/www/html/sites/all/modules/tripal_extensions/tripal_alchemist/test && phpunit
+  - docker exec -it tripal cd /var/www/html/sites/all/modules/tripal_extensions/tripal_alchemist/test; phpunit
