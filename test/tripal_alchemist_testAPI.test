@@ -30,4 +30,15 @@ final class tripal_alchemist_testAPI extends TestCase
     $this->assertInternalType('array', $bundles);
   }
 
+public function testTripal_alchemist_get_matching_bundles() {
+
+    $bundles = tripal_alchemist_get_matching_bundles("organism");
+    $this->assertInternalType('array', $bundles);
+
+
+}
+
+
+
+
 }
