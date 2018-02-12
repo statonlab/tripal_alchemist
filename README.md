@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/statonlab/tripal_alchemist.svg?branch=master)](https://travis-ci.org/statonlab/tripal_alchemist)
+
+
 Tripal Alchemist allows you to **transform**  entities from one type to another.
 
 

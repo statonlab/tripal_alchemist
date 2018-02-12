@@ -10,7 +10,7 @@ before_script:
   - docker pull bcondon/docker_tripal3
 
 script:
-  - docker run -i  --name tripal -p 8080:80 bcondon/docker_tripal3
+  - docker run -d  --name tripal -p 8080:80 bcondon/docker_tripal3
   - docker exec -it tripal echo "hello!"
  # - docker exec -it tripal php vendor/bin/phpunit -c core core/tests/Drupal/KernelTests/Component/Utility/SafeMarkupKernelTest
 
