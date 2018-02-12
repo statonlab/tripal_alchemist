@@ -1,0 +1,15 @@
+language: php
+
+services:
+  - docker
+
+sudo: required
+
+# Replace with your image name.
+before_script:
+  - docker pull bcondon/docker_tripal3
+
+script:
+  - docker run -i  --name tripal t -p 8080:80 bcondon/docker_tripal3
+  - docker exec -it tripal echo "hello!"
+
