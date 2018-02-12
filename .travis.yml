@@ -10,7 +10,8 @@ before_script:
   - docker pull bcondon/docker_tripal3
 
 script:
-  - docker run -d  --name tripal -p 8080:80 bcondon/docker_tripal3
+  - git clone https://github.com/statonlab/tripal_alchemist.git
+  - docker run -d -v tripal_alchemist:/var/www/html/sites/all/modules/tripal_extensions/tripal_alchemist  --name tripal -p 8080:80 bcondon/docker_tripal3
   - docker exec -it tripal echo "hello!"
- # - docker exec -it tripal php vendor/bin/phpunit -c core core/tests/Drupal/KernelTests/Component/Utility/SafeMarkupKernelTest
-
+    - docker exec -it tripal drush pm-enable -y tripal_alchemist
+  - docker exec -it cd /var/www/html/sites/all/modules/tripal_extensions/tripal_alchemist/test && phpunit
