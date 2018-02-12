@@ -11,6 +11,6 @@ before_script:
 script:
   - docker run  -it -d --name tripal -p 8080:80 bcondon/docker_tripal3 /bin/bash
   - docker exec -it tripal bash -c 'cd /var/www/html/sites/all/modules/tripal_extensions && git clone https://github.com/statonlab/tripal_alchemist.git'
-  - sleep 120 #We pause here so drush won't fail
+  - sleep 30 #We pause here so drush won't fail
   - docker exec -it tripal drush pm-enable -y tripal_alchemist
   - docker exec -it tripal bash -c 'cd /var/www/html/sites/all/modules/tripal_extensions/tripal_alchemist/ &&composer install && test/phpunit'
