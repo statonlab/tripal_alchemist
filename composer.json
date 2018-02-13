@@ -1,7 +1,5 @@
 {
   "require-dev": {
-    "apigen/apigen": "dev-master",
-    "roave/better-reflection": "dev-master#c87d856",
-    "phpunit/phpunit": "^7.0"
+    "phpunit/phpunit": "^5"
   }
 }
