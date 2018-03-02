@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1187120.svg)](https://doi.org/10.5281/zenodo.1187120)
+
 [![Build Status](https://travis-ci.org/statonlab/tripal_alchemist.svg?branch=master)](https://travis-ci.org/statonlab/tripal_alchemist)
 
 
