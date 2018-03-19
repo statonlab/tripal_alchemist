@@ -330,6 +330,7 @@ function tripal_alchemist_provide_collection_list($form, $source_bundle) {
     foreach ($entities as $entity) {
       $source_entity_table = "public.chado_" . $source_bundle->name; //SET SOURCE ENTITY TABLE
       $query = db_select($source_entity_table, 'SET')
+        ->fields('SET')
         ->condition('SET.entity_id', $entity, "=");
       $result = $query->execute()->fetchAll();
       if ($result) {
