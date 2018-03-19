@@ -376,7 +376,7 @@ function function_tripal_alchemist_get_bundle($bundle_id) {
  */
 
 function tripal_alchemist_get_eligible_entities($collection, $source_bundle){
-  $entities = $collection->getEntityIDs();
+  $entities = $collection->getEntityIDs($source_bundle->name);
 
   $matching_entities = [];
   foreach ($entities as $entity) {
