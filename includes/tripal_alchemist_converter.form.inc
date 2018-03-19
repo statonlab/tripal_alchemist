@@ -324,7 +324,8 @@ function tripal_alchemist_provide_collection_list($form, $source_bundle) {
 
   $options = [];
   foreach ($collections as $collection) {
-    $entities = $collection->getEntityIDs();
+
+    $entities = $collection->getEntityIDs($source_bundle);//Now need to provide the bundle name.
 
     $matching_entities = [];
     foreach ($entities as $entity) {
