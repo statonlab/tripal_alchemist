@@ -382,8 +382,10 @@ function tripal_alchemist_get_eligible_entities($collection, $source_bundle){
   foreach ($entities as $entity) {
     $source_entity_table = "public.chado_" . $source_bundle->name; //SET SOURCE ENTITY TABLE
     $query = db_select($source_entity_table, 'SET')
+      ->fields('SET')
       ->condition('SET.entity_id', $entity, "=");
     $result = $query->execute()->fetchAll();
+
     if ($result) {
       $matching_entities[] = $entity;
     }
