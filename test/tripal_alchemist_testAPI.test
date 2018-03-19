@@ -3,8 +3,9 @@
 require_once '../includes/tripal_alchemist.api.inc';
 use PHPUnit\Framework\TestCase;
 use PHPUnit\DbUnit\TestCaseTrait;
-//Change this path for the docker!
-define('DRUPAL_ROOT', '/var/www/html');
+define('DRUPAL_ROOT', getenv('DRUPAL_ROOT'));//this needs to come from teh docker container or the .env
+echo(getenv(DRUPAl_ROOT));
+
 $start = getcwd();
 
 require_once DRUPAL_ROOT . '/includes/bootstrap.inc';
@@ -12,7 +13,6 @@ $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
 
 chdir("/Users/chet/UTK/tripal");
 drupal_bootstrap(DRUPAL_BOOTSTRAP_FULL);
-
 
 chdir($start);
 

@@ -321,11 +321,10 @@ function tripal_alchemist_build_choosable_table($form, $source_bundle) {
 function tripal_alchemist_provide_collection_list($form, $source_bundle) {
   global $user;
   $collections = tripal_get_user_collections($user->uid);
-
   $options = [];
   foreach ($collections as $collection) {
 
-    $entities = $collection->getEntityIDs($source_bundle);//Now need to provide the bundle name.
+    $entities = $collection->getEntityIDs($source_bundle->name);//Now need to provide the bundle name.
 
     $matching_entities = [];
     foreach ($entities as $entity) {
