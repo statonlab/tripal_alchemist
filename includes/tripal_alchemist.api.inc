@@ -1,6 +1,7 @@
 <?php
 /**
- * API methods for Tripal Alchemist.  Some of these are module specific, others are simple helper methods for Tripal Collections or Entities.
+ * API methods for Tripal Alchemist.  Some of these are module specific, others
+ * are simple helper methods for Tripal Collections or Entities.
  */
 
 
@@ -28,6 +29,7 @@ function tripal_alchemist_get_all_bundles() {
     if (!$bundle) {
       tripal_report_error('tripal', TRIPAL_ERROR, "Unrecognized bundle name '%bundle'.",
         ['%bundle' => $bundle_name]);
+
       return FALSE;
     }
 
@@ -56,23 +58,58 @@ function tripal_alchemist_get_matching_bundles($source_table) {
       $options[$bundle->id] = $bundle->label;
     }
   }
+
   return ($options);
+}
+
+/**
+ * The job call.
+ * @param $type
+ * @param $args
+ *
+ * @throws \Exception
+ */
+function tripal_alchemist_run_conversion_job($type, $args) {
+
+  $source_bundle_id = $args['source_bundle_id'];
+  $destination_bundle_id = $args['destination_bundle_id'];
+  $source_bundle = tripal_load_bundle_entity(['id' => $source_bundle_id]);
+  $destination_bundle = tripal_load_bundle_entity(['id' => $destination_bundle_id]);
+
+  $source_entities = isset($args["source_entities"]) ? $args["source_entities"] : NULL;
+  $collection_id = isset($args["collection_id"]) ? $args["collection_id"] : NULL;
+
+  switch ($type) {
+    case "Manual":
+      tripal_alchemist_convert_select_entities($source_bundle, $destination_bundle, $source_entities, NULL);
+      break;
+
+    case "Collections" :
+      $collection = tripal_get_collection(["collection_id" => $collection_id]);
+      tripal_alchemist_convert_select_entities($source_bundle, $destination_bundle, NULL, $collection);
+      break;
+
+    case "Automatic":
+      tripal_alchemist_convert_all_entities($source_bundle, $destination_bundle);
+      break;
+  }
+
+
 }
 
 /**
  * Convert all entities from one bundle type to another
  *
- *
- * @param $args  An array with teh following keys:
- * 'source_bundle' => the source bundle.  All entities in the source will be converted.
- * 'destination_bundle' => The destination bundle.
+ * @param $source_bundle
+ * The source bundle.  All entities in the source will be converted.
+ * @param $destination_bundle
+ * The destination bundle.
  *
  * @ingroup Convert_entities
  */
 
-function tripal_alchemist_convert_all_entities($args) {
-  $source_bundle = $args['source_bundle'];
-  $destination_bundle = $args['destination_bundle'];
+function tripal_alchemist_convert_all_entities($source_bundle, $destination_bundle) {
+
   $source_bundle_table = "public.chado_" . $source_bundle->name;
   $destination_term = $destination_bundle->term_id;
   $destination_table = "public.chado_" . $destination_bundle->name;
@@ -120,7 +157,8 @@ function tripal_alchemist_convert_all_entities($args) {
         $result = db_insert($destination_table)
           ->fields(['entity_id' => $entity_id, 'record_id' => $record_id])
           ->execute();
-      } catch (Exception $e) {
+      }
+      catch (Exception $e) {
       }
 
       //update the tripal entity table
@@ -206,33 +244,27 @@ AND AP.value = :descrim_prop_value)";
 /**
  * Converts a select list of entities.
  *
- * This list of entities is retrieved either as a list of entity ids, or via a collection, depending on the args passed in.
+ * This list of entities is retrieved either as a list of entity ids, or via a
+ * collection, depending on the args passed in.
  *
- * @param $args
- * An array with the following keys:
- * 'source_bundle'
- * 'destination_bundle'
- * 'source_entities'
- * 'collection'
+ * @param $source_bundle
+ * @param $destination_bundle
+ * @param $source_entities
+ * @param $collection
  *
  * @ingroup Convert_entities
  */
 
-
-function tripal_alchemist_convert_select_entities($args) {
-
-  $source_bundle = $args['source_bundle'];
-  $destination_bundle = $args['destination_bundle'];
-  $source_entities = isset($args['source_entities']) ? $args['source_entities'] : null;
-
-  $collection = isset($args['collection']) ? $args['collection'] : null;
+function tripal_alchemist_convert_select_entities($source_bundle, $destination_bundle, $source_entities = NULL, $collection = NULL) {
 
   if (!$source_bundle || !$destination_bundle) {
-    tripal_set_message("Error: Destination and source bundle not provided.  Cannot convert entities without source and destination bundles.", TRIPAL_ERROR);
+    print("Error: Destination and source bundle not provided.  Cannot convert entities without source and destination bundles.\n");
+
     return;
   }
   if ($source_bundle->data_table != $destination_bundle->data_table) {
-    tripal_set_message("Error: destination and source bundles do not have the same base table.", TRIPAL_ERROR);
+    print("Error: destination and source bundles do not have the same base table.\n");
+
     return;
   }
   if ($collection) {
@@ -241,9 +273,14 @@ function tripal_alchemist_convert_select_entities($args) {
   }
 
   if (!$source_entities) {
-    tripal_set_message("Error: No qualifying source entities.", TRIPAL_ERROR);
+    print("\nError: No qualifying source entities.\n");
+
     return;
   }
+
+  $total_count = count($source_entities) ;
+
+  print("\n Preparing to convert " . $total_count . " entities from ". $source_bundle->label . "  to the bundle: " . $destination_bundle->label . "\n");
   //get all our source and destination table info
   $descriminating_type_cvterm_id = $destination_bundle->type_id;
   $descriminating_prop_value = $destination_bundle->type_value;
@@ -263,11 +300,16 @@ function tripal_alchemist_convert_select_entities($args) {
   }
   //First, set the property in Chado for each selected record.
 
-  $entity_to_record = [];
-
   $chado_entity_table = chado_get_bundle_entity_table($source_bundle);
 
+  $count = 0;
+
   foreach ($source_entities as $entity_id) {
+
+    if ($count %  500 == 0) {
+      print ("Converting entity" . $count  . " of " . $total_count);
+    }
+
     $record_id = db_select($chado_entity_table, 'CE')
       ->fields('CE', ['record_id'])
       ->condition('CE.entity_id', $entity_id)
@@ -275,7 +317,9 @@ function tripal_alchemist_convert_select_entities($args) {
       ->fetchField();
 
     if (!$record_id) {
-      tripal_report_error("Could not retrieve record id for entity $entity_id.  Aborting.", TRIPAL_ERROR);
+      tripal_report_error("tripal_alchemist", TRIPAL_ERROR, "Could not retrieve record id for entity" . (string) $entity_id . ".  Aborting.");
+
+      return;
     }
 
     //first update property
@@ -301,6 +345,7 @@ function tripal_alchemist_convert_select_entities($args) {
       $options = ['update_if_present' => TRUE];
       if (!chado_insert_property($record, $property, $options)) {
         tripal_report_error("Tripal_alchemist", TRIPAL_ERROR, "Could not update property for entity $entity_id.  Aborting.");
+
         return;
       }
     }
@@ -309,7 +354,8 @@ function tripal_alchemist_convert_select_entities($args) {
       $result = db_insert($destination_table)
         ->fields(['entity_id' => $entity_id, 'record_id' => $record_id])
         ->execute();
-    } catch (Exception $e) {
+    }
+    catch (Exception $e) {
     }
     //update the tripal entity table
     $result = db_update("public.tripal_entity")
@@ -325,6 +371,8 @@ function tripal_alchemist_convert_select_entities($args) {
       ->condition('entity_id', $entity_id)
       ->condition('record_id', $record_id)
       ->execute();
+
+    $count++;
   }
 }
 
@@ -343,12 +391,14 @@ function tripal_alchemist_fetch_current_bundle_entities($bundle) {
 
   $sql = "SELECT COUNT(*) FROM public.chado_" . $bundle->name;
   $results = db_query($sql)->fetchObject();
+
   return ($results->count);
 }
 
 
 /**
  * Given the bundle ID, fetch the bundle name and label
+ *
  * @param $bundle_id
  *
  * @return mixed
@@ -359,23 +409,24 @@ function function_tripal_alchemist_get_bundle($bundle_id) {
 
   $query = "SELECT TB.name, TB.label FROM public.tripal_bundle TB WHERE TB.id = :bundle_id";
   $result = db_query($query, [':bundle_id' => $bundle_id])->fetchObject();
+
   return $result;
 }
 
 
 /**
- * Given a collection object, return all entities in the collection from the source bundle.
+ * Given a collection object, return all entities in the collection from the
+ * source bundle.
  *
  * @param $collection
  * @param $source_bundle
  *
  * @return array
  *
- *  @ingroup Convert_entities
-
+ * @ingroup Convert_entities
  */
 
-function tripal_alchemist_get_eligible_entities($collection, $source_bundle){
+function tripal_alchemist_get_eligible_entities($collection, $source_bundle) {
   $entities = $collection->getEntityIDs($source_bundle->name);
 
   $matching_entities = [];
@@ -391,5 +442,5 @@ function tripal_alchemist_get_eligible_entities($collection, $source_bundle){
     }
   }
 
-  return($matching_entities);
+  return ($matching_entities);
 }
