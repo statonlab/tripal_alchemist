@@ -210,7 +210,7 @@ function tripal_alchemist_converter_form_submit($form, &$form_state) {
     $job_args["source_entities"] = $source_entities;
   }
   if ($transmutation_type == 'Collections') {
-    $collection_id = $form_state['values']['collection_id'];
+    $collection_id = $form_state['values']['collection'];
     $job_args["collection_id"] = $collection_id;
   }
 

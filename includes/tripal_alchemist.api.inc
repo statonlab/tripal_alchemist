@@ -85,6 +85,7 @@ function tripal_alchemist_run_conversion_job($type, $args) {
       break;
 
     case "Collections" :
+
       $collection = tripal_get_collection(["collection_id" => $collection_id]);
       tripal_alchemist_convert_select_entities($source_bundle, $destination_bundle, NULL, $collection);
       break;
