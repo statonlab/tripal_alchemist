@@ -307,8 +307,8 @@ function tripal_alchemist_convert_select_entities($source_bundle, $destination_b
 
   foreach ($source_entities as $entity_id) {
 
-    if ($count %  500 == 0) {
-      print ("Converting entity" . $count  . " of " . $total_count);
+    if ($count %  1000 == 0) {
+      print ("Converting entity" . $count  . " of " . $total_count . "\n");
     }
 
     $record_id = db_select($chado_entity_table, 'CE')
