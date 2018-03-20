@@ -16,5 +16,4 @@ script:
   - sleep 60 #We pause here so drush won't fail
   - docker exec -it tripal drush pm-enable -y tripal_alchemist
   - docker exec -it tripal bash -c 'cd /var/www/html/sites/all/modules/tripal_extensions/tripal_alchemist/ &&composer install && cd test && ../vendor/bin/phpunit'
-
   - composer require phpunit:version

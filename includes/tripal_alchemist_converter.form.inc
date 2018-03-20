@@ -196,34 +196,27 @@ function tripal_alchemist_converter_form_submit($form, &$form_state) {
   $destination_bundle = tripal_load_bundle_entity(['id' => $destination_bundle_id]);
 
   $job_args = [
-    "source_bundle" => $source_bundle,
-    "destination_bundle" => $destination_bundle,
+    "source_bundle_id" => $source_bundle_id,
+    "destination_bundle_id" => $destination_bundle_id,
   ];
 
+  $job_name = "Alchemist transform " . $source_bundle->label . " to " . $destination_bundle->label;
 
-  // tripal_add_job("Alchemist transmute:" . $source_bundle->label . "to " . $destination_bundle->label, 'tripal_alchemist', 'tripal_alchemist_convert_all_entities', $job_args, $user->uid, 10);
 
-  if ($transmutation_type == 'Automatic') {
-    tripal_alchemist_convert_all_entities($job_args);
-    tripal_set_message("Transformation successful!", TRIPAL_INFO);
-  }
+  //Add in extra arguments for manual and collection
   if ($transmutation_type == 'Manual') {
     $source_entities = $form_state['values']['manual_entity_select'];
     $source_entities = array_filter($source_entities);//remove unchecked selections
-
-    $job_args['source_entities'] = $source_entities;
-    tripal_alchemist_convert_select_entities($job_args);
-
+    $job_args["source_entities"] = $source_entities;
   }
-
   if ($transmutation_type == 'Collections') {
-    $collection_id = $form_state['values']['collection'];
-    $collection = tripal_get_collection(["collection_id" => $collection_id]);
-    $job_args['collection'] = $collection;
-
-    tripal_alchemist_convert_select_entities($job_args);
-
+    $collection_id = $form_state['values']['collection_id'];
+    $job_args["collection_id"] = $collection_id;
   }
+
+  tripal_add_job($job_name, 'tripal_alchemist', 'tripal_alchemist_run_conversion_job', [$transmutation_type, $job_args], $user->uid);
+
+  tripal_set_message("Job submitted!", TRIPAL_INFO);
 
 }
 
