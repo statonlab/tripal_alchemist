@@ -335,7 +335,7 @@ function tripal_alchemist_provide_collection_list($form, $source_bundle) {
     $collection_name = $collection->getName();
     $collection_id = $collection->getCollectionID();
     if ($num_matching_entities > 0) {
-      $options[$collection_id] = [
+      $options = [
         $collection_id => t("$collection_name ($num_matching_entities of $num_entities eligible)"),
       ];
     }
