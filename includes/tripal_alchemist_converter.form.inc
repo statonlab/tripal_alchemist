@@ -136,6 +136,8 @@ function tripal_alchemist_converter_form($form, &$form_state) {
   ];
 
 
+
+
   $selected_destination = isset($form_state['values']['destination_bundle']) ? $form_state['values']['destination_bundle'] : NULL;
 
   if (!$selected_destination) {
@@ -335,9 +337,7 @@ function tripal_alchemist_provide_collection_list($form, $source_bundle) {
     $collection_name = $collection->getName();
     $collection_id = $collection->getCollectionID();
     if ($num_matching_entities > 0) {
-      $options[$collection_id] = [
-        $collection_id => t("$collection_name ($num_matching_entities of $num_entities eligible)"),
-      ];
+      $options[$collection_id] = t("$collection_name ($num_matching_entities of $num_entities eligible)");
     }
   }//end collection loop
 
