@@ -75,12 +75,12 @@ function tripal_alchemist_converter_form($form, &$form_state) {
     '#suffix' => '</div>',
   ];
 
-  $form['div2'] = [
-    '#type' => 'fieldset',
-    '#collapsible' => FALSE,
-    '#prefix' => '<div id="div2_wrapper">',
-    '#suffix' => '</div>',
-  ];
+//  $form['div2'] = [
+//    '#type' => 'fieldset',
+//    '#collapsible' => FALSE,
+//    '#prefix' => '<div id="div2_wrapper">',
+//    '#suffix' => '</div>',
+//  ];
 
   $selected_base_table = isset($form_state['values']['source_bundle']) ? $form_state['values']['source_bundle'] : NULL;
 
@@ -130,7 +130,7 @@ function tripal_alchemist_converter_form($form, &$form_state) {
     '#options' => $matching_destination_bundles,
     '#ajax' => [
       'callback' => 'tripal_alchemist_destination_bundle_callback',
-      'wrapper' => 'div2_wrapper',
+      'wrapper' => 'div1_wrapper',
       'effect' => 'fade',
     ],
   ];
@@ -141,11 +141,12 @@ function tripal_alchemist_converter_form($form, &$form_state) {
   $selected_destination = isset($form_state['values']['destination_bundle']) ? $form_state['values']['destination_bundle'] : NULL;
 
   if (!$selected_destination) {
-    $form['div2']['need_destination'] = [
+    $form['div1']['need_destination'] = [
       '#markup' => "<p>Please select a destination bundle</p>",
     ];
     return $form;
   }
+
   $destination_bundle = $all_bundles_array[$selected_destination];
 
   $transmutation_type = $form_state['values']['transmutation_type'];//expect automatic, manual, collection
@@ -154,14 +155,14 @@ function tripal_alchemist_converter_form($form, &$form_state) {
     $table = tripal_alchemist_build_transaction_table($source_bundle, $destination_bundle);
 
     if (!$table) {
-      $form['div2']['kill'] = ['#markup' => '<p>No qualifying entries.  Please pick another source or destination table.</p>'];
+      $form['div1']['kill'] = ['#markup' => '<p>No qualifying entries.  Please pick another source or destination table.</p>'];
       return $form;
     }
     $markup = '<h3>Qualifying Entities</h3><p>The first 10 Entities from the source bundle that meet the Destination bundle storage criteria are listed below.</p><p><b>ALL</b> of the qualifying entities will be transformed into the destination entity bundle type.</p>';
 
     $markup .= theme('table', $table);
 
-    $form['div2']['transaction_summary'] = [
+    $form['div1']['transaction_summary'] = [
       '#type' => 'markup',
       '#markup' => $markup,
     ];
@@ -177,7 +178,7 @@ function tripal_alchemist_converter_form($form, &$form_state) {
     $form = tripal_alchemist_provide_collection_list($form, $source_bundle);
   }
 
-  $form['div2']['submit'] = [
+  $form['div1']['submit'] = [
     '#type' => 'submit',
     '#value' => t('Transform (Submit)'),
   ];
@@ -223,12 +224,13 @@ function tripal_alchemist_converter_form_submit($form, &$form_state) {
 }
 
 function tripal_alchemist_source_bundle_callback($form) {
-  return $form['div1'];
 
+  return $form['div1'];
 }
 
 function tripal_alchemist_destination_bundle_callback($form) {
-  return $form['div2'];
+
+  return $form['div1'];
 }
 
 /**
@@ -288,11 +290,11 @@ function tripal_alchemist_build_choosable_table($form, $source_bundle) {
     'name' => t('Name'),
   ];
 
-  $form['div2']['overflow'] = [
+  $form['div1']['overflow'] = [
     '#markdown' => '<p>Warning: over 500 qualifying entities, only the first 500 are    displayed below. You can still manually select from this table.  To convert more entities, please set the type property and use the automatic converter.
 </p>',
   ];
-  $form['div2']['manual_entity_select'] = [
+  $form['div1']['manual_entity_select'] = [
     '#type' => 'tableselect',
     '#header' => $headers,
     '#options' => $rows,
@@ -342,13 +344,13 @@ function tripal_alchemist_provide_collection_list($form, $source_bundle) {
   }//end collection loop
 
   if (count($options) === 0) {
-    $form['div2']['no_collection'] = [
+    $form['div1']['no_collection'] = [
       '#markup' => "<h3>No Collections available</h3><p>You do not currently have any collections with entities matching this source bundle.  Please create a collection of entities you would like to convert.</p>",
     ];
     return $form;
   }
 
-  $form['div2']['collection'] = [
+  $form['div1']['collection'] = [
     '#type' => 'select',
     '#title' => t('Available Collections'),
     '#description' => t('Collections.  Alchemist will convert all eligible entities in a collection form the source bundle to the destination bundle.'),
