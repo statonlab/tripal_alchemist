@@ -174,10 +174,15 @@ function tripal_alchemist_convert_all_entities($source_bundle, $destination_bund
       // Delete the old entities, but only if they are present in the destination table
       //delete from source
       //TODO: CHECK THAT IT WAS SUCCESSFUL BEFORE DELETING
-      $result = db_delete($source_bundle_table)
+      db_delete($source_bundle_table)
         ->condition('entity_id', $entity_id)
         ->condition('record_id', $record_id)
         ->execute();
+
+      // Trigger entity update hook
+      $entities = tripal_load_entity('TripalEntity', [$entity_id]);
+      $entity = reset($entities);
+      module_invoke_all('entity_update', $entity, $entity->type);
     }
 
     return;
