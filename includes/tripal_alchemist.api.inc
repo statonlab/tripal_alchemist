@@ -181,7 +181,9 @@ function tripal_alchemist_convert_all_entities($source_bundle, $destination_bund
 
       // Trigger entity update hook
       $entities = tripal_load_entity('TripalEntity', [$entity_id]);
+      /** @var \TripalEntityController $entity */
       $entity = reset($entities);
+      $entity->resetCache();
       module_invoke_all('entity_update', $entity, $entity->type);
     }
 
