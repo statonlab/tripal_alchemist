@@ -1,5 +1,6 @@
 {
   "require-dev": {
-    "phpunit/phpunit": "^5"
+    "phpunit/phpunit": "^5",
+    "statonlab/tripal-test-suite": "^1.4"
   }
 }

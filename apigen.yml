@@ -1,6 +1,0 @@
-parameters:
-    visibilityLevels: [public, protected] # array
-    annotationGroups: [todo, deprecated] # array
-    title: "Tripal Alchemist API" # string
-    baseUrl: "http://www.bradfordcondon.com/api_documentation/" # string
-    overwrite: false # bool

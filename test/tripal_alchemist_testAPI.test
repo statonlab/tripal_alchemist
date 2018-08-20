@@ -18,12 +18,6 @@ chdir($start);
 
 final class tripal_alchemist_testAPI extends TestCase
 {
-  public function testTrueIsTrue()
-  {
-    $foo = true;
-    $this->assertTrue($foo);
-
-  }
 
   public function testHasBundles() {
     $bundles = tripal_alchemist_get_all_bundles();
@@ -37,8 +31,5 @@ public function testTripal_alchemist_get_matching_bundles() {
 
 
 }
-
-
-
 
 }
