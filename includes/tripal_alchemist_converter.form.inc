@@ -406,7 +406,7 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
 
     $result_count = $count_query->countQuery()->execute()->fetchField();
 
-    $results = $query->limit(10)->execute()->fetchAll();
+    $results = $query->range(0,10)->execute()->fetchAll();
   }
   elseif ($destination_bundle->type_linker_table && $destination_bundle->type_column && $destination_bundle->type_value) {
     //This is a linker table type transmutation
@@ -428,8 +428,7 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
 
     $result_count = $count_query->countQuery()->execute()->fetchField();
 
-    $results = $query->limit(10)->execute()->fetchAll();
-
+    $results = $query->range(0,10)->execute()->fetchAll();
   }
   else {
     tripal_set_message("destination bundle is not properly set.", TRIPAL_ERROR);
