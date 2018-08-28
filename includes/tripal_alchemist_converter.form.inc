@@ -152,13 +152,15 @@ function tripal_alchemist_converter_form($form, &$form_state) {
   $transmutation_type = $form_state['values']['transmutation_type'];//expect automatic, manual, collection
 
   if ($transmutation_type == 'Automatic') {
-    $table = tripal_alchemist_build_transaction_table($source_bundle, $destination_bundle);
+    $info = tripal_alchemist_build_transaction_table($source_bundle, $destination_bundle);
 
-    if (!$table) {
+    $table = $info['table'];
+    $count = $info['count'];
+    if ($count === 0) {
       $form['div1']['kill'] = ['#markup' => '<p>No qualifying entries.  Please pick another source or destination table.</p>'];
       return $form;
     }
-    $markup = '<h3>Qualifying Entities</h3><p>The first 10 Entities from the source bundle that meet the Destination bundle storage criteria are listed below.</p><p><b>ALL</b> of the qualifying entities will be transformed into the destination entity bundle type.</p>';
+    $markup = '<h3>'. (string) $count . ' Qualifying Entities</h3><p>The first 10 Entities from the source bundle that meet the Destination bundle storage criteria are listed below.</p><p><b>ALL</b> of the qualifying entities will be transformed into the destination entity bundle type.</p>';
 
     $markup .= theme('table', $table);
 
@@ -376,6 +378,10 @@ function tripal_alchemist_provide_collection_list($form, $source_bundle) {
  */
 function tripal_alchemist_build_transaction_table($source_bundle, $destination_bundle) {
 
+  $result_count = 0;
+  $result_count = 0;
+
+
   // What we want to do is a) Pull all the **source**  bundle entities
   // and look at how many of those qualify for the destination bundle.
   $source_table = "chado." . $source_bundle->data_table;//CBT  CHADO BASE TABLE
@@ -396,7 +402,11 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
     $query->leftJoin($destination_entity_table, 'DET', 'SET.record_id = DET.record_id');
     $query->condition('CBT.' . $type_column, $type_id);
     $query->condition('DET.record_id', NULL, 'IS');
-    $results = $query->execute()->fetchAll();
+    $count_query = $query;
+
+    $result_count = $count_query->countQuery()->execute()->fetchField();
+
+    $results = $query->range(0,10)->execute()->fetchAll();
   }
   elseif ($destination_bundle->type_linker_table && $destination_bundle->type_column && $destination_bundle->type_value) {
     //This is a linker table type transmutation
@@ -414,35 +424,32 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
     $query->condition('CLT.' . $type_column, $type_id);
     $query->condition('CLT.value', $type_value);
     $query->condition('DET.record_id', NULL, 'IS');
-    $results = $query->execute()->fetchAll();
+    $count_query = $query;
 
+    $result_count = $count_query->countQuery()->execute()->fetchField();
+
+    $results = $query->range(0,10)->execute()->fetchAll();
   }
   else {
     tripal_set_message("destination bundle is not properly set.", TRIPAL_ERROR);
-    return;
+    return ['table' => NULL, 'count' => $result_count];
   }
 
   $rows = [];
 
-  $result_count = 0;
   $overflow = FALSE;
 
+  if ($result_count === 0){
+    return ['table' => NULL, 'count' => $result_count];
+  }
+
   foreach ($results as $result) {
-    if ($result_count > 10) {
-      $overflow = TRUE;
-      break;
-    }
     $rows[] = [
       $result->record_id,
       $result->entity_id,
       $result->name,
     ];
-    $result_count++;
 
-  }
-
-  if (!$rows) {
-    return NULL;
   }
 
   $headers = ['Record ID', 'Entity ID', 'Name'];
@@ -452,7 +459,7 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
     'rows' => $rows,
   ];
 
-  return $table;
+  return ['table' => $table, 'count' => $result_count];
 
 }
 
