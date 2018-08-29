@@ -221,6 +221,8 @@ function tripal_alchemist_convert_all_entities($source_bundle, $destination_bund
             AND AP.value = :descrim_prop_value 
             AND DT.record_id IS NULL)";
 
+  //TODO: THIS WILL FAIL IF TOO MANY ENTITIES
+
   $results = db_query($sql, [
     ":cvterm_id" => $descriminating_type_cvterm_id,
     ":descrim_prop_value" => $descriminating_prop_value,
@@ -301,6 +303,7 @@ function tripal_alchemist_convert_select_entities($source_bundle, $destination_b
   }
 
   $total_count = count($source_entities);
+  //TODO:  THIS WILL FAIL IF TOO MANY ENTITIES.
 
   print("\n Preparing to convert " . $total_count . " entities from " . $source_bundle->label . "  to the bundle: " . $destination_bundle->label . "\n");
   //get all our source and destination table info
