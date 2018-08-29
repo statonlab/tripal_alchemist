@@ -147,7 +147,7 @@ function tripal_alchemist_convert_all_entities($source_bundle, $destination_bund
 
     $count_query = $query;
 
-    $total_count = $count_query->countQuery->execute()->fetchField();
+    $total_count = $count_query->countQuery()->execute()->fetchField();
 
     print("Converting " . $total_count . " records\n");
 
