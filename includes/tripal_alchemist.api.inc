@@ -64,6 +64,7 @@ function tripal_alchemist_get_matching_bundles($source_table) {
 
 /**
  * The job call.
+ *
  * @param $type
  * @param $args
  *
@@ -136,53 +137,68 @@ function tripal_alchemist_convert_all_entities($source_bundle, $destination_bund
 
     //step 1 get all qualifying entities
 
+
     $query = db_select($chado_base_table, 'CBT');
     $query->fields('SET', ['entity_id', 'record_id']);
     $query->innerJoin($source_bundle_table, 'SET', 'SET.record_id = CBT.' . $source_bundle->data_table . '_id');
     $query->leftJoin($destination_table, 'DET', 'SET.record_id = DET.record_id');
     $query->condition('CBT.' . $type_column, $type_id);
     $query->condition('DET.record_id', NULL, 'IS');
-    $results = $query->execute()->fetchAll();
 
-    foreach ($results as $result) {
-      $record_id = $result->record_id;
-      $entity_id = $result->entity_id;
+    $count_query = $query;
 
-      if (!$record_id) {
-        tripal_report_error("Could not retrieve record id for entity $entity_id.  Aborting.", TRIPAL_ERROR);
-      }
+    $total_count = $count_query->countQuery()->execute()->fetchField();
 
-      //insert into the destination table
-      //TODO Ignore duplicates
-      try {
-        $result = db_insert($destination_table)
-          ->fields(['entity_id' => $entity_id, 'record_id' => $record_id])
+    print("Converting " . $total_count . " records\n");
+
+    $place = 0;
+    $step = 1000;
+
+    while ($place < $total_count) {
+
+      $results = $query->range($place, ($place + $step))->execute()->fetchAll();
+
+      foreach ($results as $result) {
+        $record_id = $result->record_id;
+        $entity_id = $result->entity_id;
+
+        if (!$record_id) {
+          tripal_report_error("Could not retrieve record id for entity $entity_id.  Aborting.", TRIPAL_ERROR);
+        }
+
+        //insert into the destination table
+        //TODO Ignore duplicates
+        try {
+          $result = db_insert($destination_table)
+            ->fields(['entity_id' => $entity_id, 'record_id' => $record_id])
+            ->execute();
+        } catch (Exception $e) {
+        }
+
+        //update the tripal entity table
+        $result = db_update("public.tripal_entity")
+          ->fields([
+            'bundle' => $destination_bundle->name,
+            'term_id' => $destination_term,
+          ])
+          ->condition('id', $entity_id, '=')
           ->execute();
+
+        // Delete the old entities, but only if they are present in the destination table
+        //delete from source
+        //TODO: CHECK THAT IT WAS SUCCESSFUL BEFORE DELETING
+        db_delete($source_bundle_table)
+          ->condition('entity_id', $entity_id)
+          ->condition('record_id', $record_id)
+          ->execute();
+
+        // Trigger entity update hook
+        $entities = tripal_load_entity('TripalEntity', [$entity_id], TRUE, [], FALSE);
+        $entity = reset($entities);
+        module_invoke_all('entity_update', $entity, $entity->type);
       }
-      catch (Exception $e) {
-      }
 
-      //update the tripal entity table
-      $result = db_update("public.tripal_entity")
-        ->fields([
-          'bundle' => $destination_bundle->name,
-          'term_id' => $destination_term,
-        ])
-        ->condition('id', $entity_id, '=')
-        ->execute();
-
-      // Delete the old entities, but only if they are present in the destination table
-      //delete from source
-      //TODO: CHECK THAT IT WAS SUCCESSFUL BEFORE DELETING
-      db_delete($source_bundle_table)
-        ->condition('entity_id', $entity_id)
-        ->condition('record_id', $record_id)
-        ->execute();
-
-      // Trigger entity update hook
-      $entities = tripal_load_entity('TripalEntity', [$entity_id], true, [], false);
-      $entity = reset($entities);
-      module_invoke_all('entity_update', $entity, $entity->type);
+      $place = $place + $step;
     }
 
     return;
@@ -204,6 +220,8 @@ function tripal_alchemist_convert_all_entities($source_bundle, $destination_bund
           WHERE CVT.cvterm_id = :cvterm_id 
             AND AP.value = :descrim_prop_value 
             AND DT.record_id IS NULL)";
+
+  //TODO: THIS WILL FAIL IF TOO MANY ENTITIES
 
   $results = db_query($sql, [
     ":cvterm_id" => $descriminating_type_cvterm_id,
@@ -284,9 +302,10 @@ function tripal_alchemist_convert_select_entities($source_bundle, $destination_b
     return;
   }
 
-  $total_count = count($source_entities) ;
+  $total_count = count($source_entities);
+  //TODO:  THIS WILL FAIL IF TOO MANY ENTITIES.
 
-  print("\n Preparing to convert " . $total_count . " entities from ". $source_bundle->label . "  to the bundle: " . $destination_bundle->label . "\n");
+  print("\n Preparing to convert " . $total_count . " entities from " . $source_bundle->label . "  to the bundle: " . $destination_bundle->label . "\n");
   //get all our source and destination table info
   $descriminating_type_cvterm_id = $destination_bundle->type_id;
   $descriminating_prop_value = $destination_bundle->type_value;
@@ -312,8 +331,8 @@ function tripal_alchemist_convert_select_entities($source_bundle, $destination_b
 
   foreach ($source_entities as $entity_id) {
 
-    if ($count %  1000 == 0) {
-      print ("Converting entity" . $count  . " of " . $total_count . "\n");
+    if ($count % 1000 == 0) {
+      print ("Converting entity" . $count . " of " . $total_count . "\n");
     }
 
     $record_id = db_select($chado_entity_table, 'CE')
@@ -360,8 +379,7 @@ function tripal_alchemist_convert_select_entities($source_bundle, $destination_b
       $result = db_insert($destination_table)
         ->fields(['entity_id' => $entity_id, 'record_id' => $record_id])
         ->execute();
-    }
-    catch (Exception $e) {
+    } catch (Exception $e) {
     }
     //update the tripal entity table
     $result = db_update("public.tripal_entity")
