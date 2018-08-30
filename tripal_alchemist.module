@@ -33,12 +33,15 @@ function tripal_alchemist_menu() {
 }
 
 /**
- * Implements hook_queue_info().
+ * Implements hook_cron_queue_info().
  */
-function tripal_alchemist_queue_info() {
+function tripal_alchemist_cron_queue_info() {
   $queues['tripal_alchemist'] = [
     'worker callback' => 'tripal_alchemist_run_queue',
-    // Let worker take as much time required to dispatch all jobs
+    // Let worker take as much time required to run the job
+    // Some jobs take 40+ hours so this is set to 200 hours
     'time' => 60 * 60 * 200,
   ];
+
+  return $queues;
 }
