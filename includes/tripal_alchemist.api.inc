@@ -156,7 +156,7 @@ function tripal_alchemist_convert_all_entities($source_bundle, $destination_bund
 
     while ($place < $total_count) {
 
-      $results = $query->range($place, ($place + $step))->execute()->fetchAll();
+      $results = $query->range($place, $step)->execute()->fetchAll();
 
       foreach ($results as $result) {
         $record_id = $result->record_id;
