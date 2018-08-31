@@ -219,10 +219,14 @@ function tripal_alchemist_converter_form_submit($form, &$form_state) {
     $job_args["collection_id"] = $collection_id;
   }
 
-  tripal_add_job($job_name, 'tripal_alchemist', 'tripal_alchemist_run_conversion_job', [$transmutation_type, $job_args], $user->uid);
+  $item = new stdClass();
+  $item->type = $transmutation_type;
+  $item->args = $job_args;
+  DrupalQueue::get('tripal_alchemist')->createItem($item);
 
-  tripal_set_message("Job submitted!", TRIPAL_INFO);
+  // tripal_add_job($job_name, 'tripal_alchemist', 'tripal_alchemist_run_conversion_job', [$transmutation_type, $job_args], $user->uid);
 
+  tripal_set_message("Job submitted! Please run `drush cron` to execute the job.", TRIPAL_INFO);
 }
 
 function tripal_alchemist_source_bundle_callback($form) {

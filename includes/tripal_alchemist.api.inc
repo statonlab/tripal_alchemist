@@ -63,6 +63,17 @@ function tripal_alchemist_get_matching_bundles($source_table) {
 }
 
 /**
+ * Dispatch the job.
+ *
+ * @param $item
+ *
+ * @throws \Exception
+ */
+function tripal_alchemist_run_queue($item) {
+  tripal_alchemist_run_conversion_job($item->type, $item->args);
+}
+
+/**
  * The job call.
  *
  * @param $type
