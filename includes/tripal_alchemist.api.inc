@@ -150,7 +150,7 @@ function tripal_alchemist_dispatch(
 
     $i = 1;
     if ($total_count > 0) {
-      print "Dispatching " . ceil($length / $total_count) . " jobs\n";
+      print "Dispatching " . floor($total_count / $length) . " jobs\n";
     }
 
     while ($offset < $total_count) {

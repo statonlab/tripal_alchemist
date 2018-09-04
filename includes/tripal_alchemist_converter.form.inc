@@ -463,4 +463,3 @@ function tripal_alchemist_build_transaction_table(
 
   return ['table' => $table, 'count' => $result_count];
 }
-
