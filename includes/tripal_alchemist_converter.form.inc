@@ -52,7 +52,6 @@ function tripal_alchemist_converter_form($form, &$form_state) {
     ],
   ];
 
-
   $form['source_bundle'] = [
     '#type' => 'select',
     '#title' => t('Source Bundle'),
@@ -75,12 +74,12 @@ function tripal_alchemist_converter_form($form, &$form_state) {
     '#suffix' => '</div>',
   ];
 
-//  $form['div2'] = [
-//    '#type' => 'fieldset',
-//    '#collapsible' => FALSE,
-//    '#prefix' => '<div id="div2_wrapper">',
-//    '#suffix' => '</div>',
-//  ];
+  //  $form['div2'] = [
+  //    '#type' => 'fieldset',
+  //    '#collapsible' => FALSE,
+  //    '#prefix' => '<div id="div2_wrapper">',
+  //    '#suffix' => '</div>',
+  //  ];
 
   $selected_base_table = isset($form_state['values']['source_bundle']) ? $form_state['values']['source_bundle'] : NULL;
 
@@ -90,7 +89,6 @@ function tripal_alchemist_converter_form($form, &$form_state) {
     ];
     return $form;
   }
-
 
   $source_bundle = $all_bundles_array[$selected_base_table];
   $source_table = $source_bundle->data_table;
@@ -135,9 +133,6 @@ function tripal_alchemist_converter_form($form, &$form_state) {
     ],
   ];
 
-
-
-
   $selected_destination = isset($form_state['values']['destination_bundle']) ? $form_state['values']['destination_bundle'] : NULL;
 
   if (!$selected_destination) {
@@ -152,7 +147,8 @@ function tripal_alchemist_converter_form($form, &$form_state) {
   $transmutation_type = $form_state['values']['transmutation_type'];//expect automatic, manual, collection
 
   if ($transmutation_type == 'Automatic') {
-    $info = tripal_alchemist_build_transaction_table($source_bundle, $destination_bundle);
+    $info = tripal_alchemist_build_transaction_table($source_bundle,
+      $destination_bundle);
 
     $table = $info['table'];
     $count = $info['count'];
@@ -160,7 +156,7 @@ function tripal_alchemist_converter_form($form, &$form_state) {
       $form['div1']['kill'] = ['#markup' => '<p>No qualifying entries.  Please pick another source or destination table.</p>'];
       return $form;
     }
-    $markup = '<h3>'. (string) $count . ' Qualifying Entities</h3><p>The first 10 Entities from the source bundle that meet the Destination bundle storage criteria are listed below.</p><p><b>ALL</b> of the qualifying entities will be transformed into the destination entity bundle type.</p>';
+    $markup = '<h3>' . (string) $count . ' Qualifying Entities</h3><p>The first 10 Entities from the source bundle that meet the Destination bundle storage criteria are listed below.</p><p><b>ALL</b> of the qualifying entities will be transformed into the destination entity bundle type.</p>';
 
     $markup .= theme('table', $table);
 
@@ -180,6 +176,13 @@ function tripal_alchemist_converter_form($form, &$form_state) {
     $form = tripal_alchemist_provide_collection_list($form, $source_bundle);
   }
 
+  $form['div1']['trigger_hooks'] = [
+    '#type' => 'checkbox',
+    '#default_value' => 1,
+    '#title' => 'Trigger entity update hooks',
+    '#description' => 'By triggering hooks, other modules can take action based on the changes to the entity. However, this will significantly slow down the transformation job.',
+  ];
+
   $form['div1']['submit'] = [
     '#type' => 'submit',
     '#value' => t('Transform (Submit)'),
@@ -188,27 +191,19 @@ function tripal_alchemist_converter_form($form, &$form_state) {
   return $form;
 }
 
-
 function tripal_alchemist_converter_form_submit($form, &$form_state) {
-
-  global $user;
-
   $source_bundle_id = $form_state['values']['source_bundle'];
   $destination_bundle_id = $form_state['values']['destination_bundle'];
   $transmutation_type = $form_state['values']['transmutation_type'];
-
-  $source_bundle = tripal_load_bundle_entity(['id' => $source_bundle_id]);
-  $destination_bundle = tripal_load_bundle_entity(['id' => $destination_bundle_id]);
+  $trigger_hooks = $form_state['values']['trigger_hooks'];
 
   $job_args = [
     "source_bundle_id" => $source_bundle_id,
     "destination_bundle_id" => $destination_bundle_id,
+    "trigger_hooks" => $trigger_hooks,
   ];
 
-  $job_name = "Alchemist transform " . $source_bundle->label . " to " . $destination_bundle->label;
-
-
-  //Add in extra arguments for manual and collection
+  // Add in extra arguments for manual and collection
   if ($transmutation_type == 'Manual') {
     $source_entities = $form_state['values']['manual_entity_select'];
     $source_entities = array_filter($source_entities);//remove unchecked selections
@@ -219,23 +214,20 @@ function tripal_alchemist_converter_form_submit($form, &$form_state) {
     $job_args["collection_id"] = $collection_id;
   }
 
-  $item = new stdClass();
-  $item->type = $transmutation_type;
-  $item->args = $job_args;
-  DrupalQueue::get('tripal_alchemist')->createItem($item);
+  DrupalQueue::get('tripal_alchemist')->createItem((object) [
+    'type' => $transmutation_type,
+    'args' => $job_args,
+  ]);
 
-  // tripal_add_job($job_name, 'tripal_alchemist', 'tripal_alchemist_run_conversion_job', [$transmutation_type, $job_args], $user->uid);
-
-  tripal_set_message("Job submitted! Please run `drush cron` to execute the job.", TRIPAL_INFO);
+  tripal_set_message("Job submitted! Please run `drush cron` to execute the job.",
+    TRIPAL_INFO);
 }
 
 function tripal_alchemist_source_bundle_callback($form) {
-
   return $form['div1'];
 }
 
 function tripal_alchemist_destination_bundle_callback($form) {
-
   return $form['div1'];
 }
 
@@ -251,8 +243,7 @@ function tripal_alchemist_destination_bundle_callback($form) {
  */
 
 function tripal_alchemist_build_choosable_table($form, $source_bundle) {
-
-  //TODO this would be much better if it was searchable by property or anything really...
+  // TODO this would be much better if it was searchable by property or anything really...
 
   $source_table = "chado." . $source_bundle->data_table;//CBT  CHADO BASE TABLE
   $source_entity_table = "public.chado_" . $source_bundle->name; //SET SOURCE ENTITY TABLE
@@ -264,7 +255,8 @@ function tripal_alchemist_build_choosable_table($form, $source_bundle) {
   $query = db_select($source_table, 'CBT');
   $query->fields('SET', ['record_id', 'entity_id']);
   $query->fields('CBT', ['name']);
-  $query->innerJoin($source_entity_table, 'SET', 'SET.record_id = CBT.' . $source_bundle->data_table . '_id');
+  $query->innerJoin($source_entity_table, 'SET',
+    'SET.record_id = CBT.' . $source_bundle->data_table . '_id');
   $results = $query->execute()->fetchAll();
 
   $rows = [];
@@ -311,7 +303,8 @@ function tripal_alchemist_build_choosable_table($form, $source_bundle) {
 }
 
 /**
- * Provides a list of collections that include entities within the source bundle.
+ * Provides a list of collections that include entities within the source
+ * bundle.
  *
  * @param $form
  * @param $source_bundle
@@ -368,7 +361,6 @@ function tripal_alchemist_provide_collection_list($form, $source_bundle) {
   return $form;
 }
 
-
 /**
  * Builds a table to display the entities that will be converted given the
  * source and destination bundle.
@@ -380,11 +372,13 @@ function tripal_alchemist_provide_collection_list($form, $source_bundle) {
  *
  * @ingroup Tripal_Alchemist_Form
  */
-function tripal_alchemist_build_transaction_table($source_bundle, $destination_bundle) {
+function tripal_alchemist_build_transaction_table(
+  $source_bundle,
+  $destination_bundle
+) {
 
   $result_count = 0;
   $result_count = 0;
-
 
   // What we want to do is a) Pull all the **source**  bundle entities
   // and look at how many of those qualify for the destination bundle.
@@ -402,15 +396,17 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
     $query = db_select($source_table, 'CBT');
     $query->fields('SET', ['record_id', 'entity_id']);
     $query->fields('CBT', ['name']);
-    $query->innerJoin($source_entity_table, 'SET', 'SET.record_id = CBT.' . $source_bundle->data_table . '_id');
-    $query->leftJoin($destination_entity_table, 'DET', 'SET.record_id = DET.record_id');
+    $query->innerJoin($source_entity_table, 'SET',
+      'SET.record_id = CBT.' . $source_bundle->data_table . '_id');
+    $query->leftJoin($destination_entity_table, 'DET',
+      'SET.record_id = DET.record_id');
     $query->condition('CBT.' . $type_column, $type_id);
     $query->condition('DET.record_id', NULL, 'IS');
     $count_query = $query;
 
     $result_count = $count_query->countQuery()->execute()->fetchField();
 
-    $results = $query->range(0,10)->execute()->fetchAll();
+    $results = $query->range(0, 10)->execute()->fetchAll();
   }
   elseif ($destination_bundle->type_linker_table && $destination_bundle->type_column && $destination_bundle->type_value) {
     //This is a linker table type transmutation
@@ -422,9 +418,12 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
     $query = db_select($source_table, 'CBT');
     $query->fields('SET', ['record_id', 'entity_id']);
     $query->fields('CBT', ['name']);
-    $query->innerJoin($source_entity_table, 'SET', 'SET.record_id = CBT.' . $source_bundle->data_table . '_id');
-    $query->innerJoin($type_linker_table, 'CLT', 'CBT.' . $source_bundle->data_table . '_id = CLT.' . $source_bundle->data_table . '_id');
-    $query->leftJoin($destination_entity_table, 'DET', 'SET.record_id = DET.record_id');
+    $query->innerJoin($source_entity_table, 'SET',
+      'SET.record_id = CBT.' . $source_bundle->data_table . '_id');
+    $query->innerJoin($type_linker_table, 'CLT',
+      'CBT.' . $source_bundle->data_table . '_id = CLT.' . $source_bundle->data_table . '_id');
+    $query->leftJoin($destination_entity_table, 'DET',
+      'SET.record_id = DET.record_id');
     $query->condition('CLT.' . $type_column, $type_id);
     $query->condition('CLT.value', $type_value);
     $query->condition('DET.record_id', NULL, 'IS');
@@ -432,7 +431,7 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
 
     $result_count = $count_query->countQuery()->execute()->fetchField();
 
-    $results = $query->range(0,10)->execute()->fetchAll();
+    $results = $query->range(0, 10)->execute()->fetchAll();
   }
   else {
     tripal_set_message("destination bundle is not properly set.", TRIPAL_ERROR);
@@ -443,7 +442,7 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
 
   $overflow = FALSE;
 
-  if ($result_count === 0){
+  if ($result_count === 0) {
     return ['table' => NULL, 'count' => $result_count];
   }
 
@@ -453,7 +452,6 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
       $result->entity_id,
       $result->name,
     ];
-
   }
 
   $headers = ['Record ID', 'Entity ID', 'Name'];
@@ -464,6 +462,5 @@ function tripal_alchemist_build_transaction_table($source_bundle, $destination_b
   ];
 
   return ['table' => $table, 'count' => $result_count];
-
 }
 
