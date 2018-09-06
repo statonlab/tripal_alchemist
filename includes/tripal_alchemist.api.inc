@@ -198,7 +198,7 @@ function tripal_alchemist_convert_chunk($args) {
   $query->condition('CBT.' . $type_column, $type_id);
   $query->condition('DET.record_id', NULL, 'IS');
   // We always start from 0 because we delete the records we process!!
-  $results = $query->execute();
+  $results = $query->range(0, $length)->execute();
   $i = 0;
   while ($result = $results->fetchObject()) {
     $i++;
