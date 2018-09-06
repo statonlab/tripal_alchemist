@@ -164,11 +164,12 @@ function tripal_alchemist_dispatch(
         'trigger_hooks' => $trigger_hooks == 1,
       ]);
 
-      print "Dispatched job #{$i}\n";
 
       $offset += $length;
       $i++;
     }
+    $i--;
+    print "Dispatched {$i} jobs\n";
   }
   else {
     tripal_alchemist_convert_by_prop($source_bundle, $destination_bundle);
