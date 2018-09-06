@@ -140,6 +140,7 @@ function tripal_alchemist_dispatch(
       'SET.record_id = DET.record_id');
     $query->condition('CBT.' . $type_column, $type_id);
     $query->condition('DET.record_id', NULL, 'IS');
+    $query->orderBy('DET.record_if', 'ASC');
 
     $count_query = $query;
 
@@ -197,9 +198,10 @@ function tripal_alchemist_convert_chunk($args) {
   $query->condition('CBT.' . $type_column, $type_id);
   $query->condition('DET.record_id', NULL, 'IS');
   // We always start from 0 because we delete the records we process!!
-  $results = $query->range(0, $length)->execute()->fetchAll();
-
-  foreach ($results as $result) {
+  $results = $query->execute();
+  $i = 0;
+  while ($result = $results->fetchObject()) {
+    $i++;
     $record_id = $result->record_id;
     $entity_id = $result->entity_id;
 
@@ -519,5 +521,5 @@ function tripal_alchemist_get_eligible_entities($collection, $source_bundle) {
     }
   }
 
-  return ($matching_entities);
+  return $matching_entities;
 }
