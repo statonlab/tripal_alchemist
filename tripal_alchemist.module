@@ -38,7 +38,8 @@ function tripal_alchemist_menu() {
 function tripal_alchemist_cron_queue_info() {
   $queues['tripal_alchemist'] = [
     'worker callback' => 'tripal_alchemist_run_queue',
-    'time' => 60 * 60 * 2,
+    // 15 minutes per run
+    'time' => 60 * 15,
   ];
 
   return $queues;
