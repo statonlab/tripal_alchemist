@@ -68,12 +68,7 @@ function tripal_alchemist_get_matching_bundles($source_table) {
  * @throws \Exception
  */
 function tripal_alchemist_run_queue($item) {
-  if (isset($item->callback)) {
-    call_user_func($item->callback, $item);
-  }
-  else {
-    tripal_alchemist_run_conversion_job($item->type, $item->args);
-  }
+  tripal_alchemist_run_conversion_job($item->type, $item->args);
 }
 
 /**
@@ -117,72 +112,27 @@ function tripal_alchemist_dispatch(
   $destination_bundle,
   $trigger_hooks
 ) {
-  $source_bundle_table = "public.chado_" . $source_bundle->name;
-  $destination_table = "public.chado_" . $destination_bundle->name;
-  $chado_base_table = "chado." . $source_bundle->data_table;
-  $type_id = $destination_bundle->type_id;
-  $type_column = $destination_bundle->type_column;
-
   if (!$source_bundle || !$destination_bundle) {
     tripal_set_message("Error: Destination and source bundle not provided.  Cannot convert entities without source and destination bundles.",
       TRIPAL_ERROR);
   }
 
-  $type_linker_table = NULL;
+  $type_linker_table = $destination_bundle->type_linker_table;
 
-  if (!$destination_bundle->type_linker_table && $destination_bundle->type_column) {
-    // Step 1 get all qualifying entities
-    $query = db_select($chado_base_table, 'CBT');
-    $query->fields('SET', ['entity_id', 'record_id']);
-    $query->innerJoin($source_bundle_table, 'SET',
-      'SET.record_id = CBT.' . $source_bundle->data_table . '_id');
-    $query->leftJoin($destination_table, 'DET',
-      'SET.record_id = DET.record_id');
-    $query->condition('CBT.' . $type_column, $type_id);
-    $query->condition('DET.record_id', NULL, 'IS');
-    $query->orderBy('DET.record_if', 'ASC');
-
-    $count_query = $query;
-
-    $total_count = $count_query->countQuery()->execute()->fetchField();
-
-    $offset = 0;
-    $length = 1000;
-
-    $i = 1;
-    if ($total_count > 0) {
-      print "Dispatching " . floor($total_count / $length) . " jobs\n";
-    }
-
-    while ($offset < $total_count) {
-      DrupalQueue::get('tripal_alchemist')->createItem((object) [
-        'callback' => 'tripal_alchemist_convert_chunk',
-        'offset' => $offset,
-        'length' => $length,
-        'source_bundle' => $source_bundle,
-        'destination_bundle' => $destination_bundle,
-        'trigger_hooks' => $trigger_hooks == 1,
-      ]);
-
-
-      $offset += $length;
-      $i++;
-    }
-    $i--;
-    print "Dispatched {$i} jobs\n";
+  if (!$type_linker_table && $destination_bundle->type_column) {
+    tripal_alchemist_convert_all($source_bundle, $destination_bundle,
+      $trigger_hooks);
   }
   else {
     tripal_alchemist_convert_by_prop($source_bundle, $destination_bundle);
   }
 }
 
-function tripal_alchemist_convert_chunk($args) {
-  print "Running chunk {$args->offset} to " . ($args->offset + $args->length) . "\n";
-  $source_bundle = $args->source_bundle;
-  $destination_bundle = $args->destination_bundle;
-  $offset = $args->offset;
-  $length = $args->length;
-
+function tripal_alchemist_convert_all(
+  $source_bundle,
+  $destination_bundle,
+  $trigger_hooks = TRUE
+) {
   $source_bundle_table = "public.chado_" . $source_bundle->name;
   $destination_term = $destination_bundle->term_id;
   $destination_table = "public.chado_" . $destination_bundle->name;
@@ -198,11 +148,9 @@ function tripal_alchemist_convert_chunk($args) {
   $query->leftJoin($destination_table, 'DET', 'SET.record_id = DET.record_id');
   $query->condition('CBT.' . $type_column, $type_id);
   $query->condition('DET.record_id', NULL, 'IS');
-  // We always start from 0 because we delete the records we process!!
-  $results = $query->range(0, $length)->execute();
-  $i = 0;
+  $results = $query->execute();
+
   while ($result = $results->fetchObject()) {
-    $i++;
     $record_id = $result->record_id;
     $entity_id = $result->entity_id;
 
@@ -235,7 +183,7 @@ function tripal_alchemist_convert_chunk($args) {
       ->execute();
 
     // Trigger entity update hook
-    if ($args->trigger_hooks) {
+    if ($trigger_hooks) {
       $entities = tripal_load_entity('TripalEntity', [$entity_id], TRUE, [],
         FALSE);
       $entity = reset($entities);
