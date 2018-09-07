@@ -148,7 +148,12 @@ function tripal_alchemist_convert_all(
   $query->leftJoin($destination_table, 'DET', 'SET.record_id = DET.record_id');
   $query->condition('CBT.' . $type_column, $type_id);
   $query->condition('DET.record_id', NULL, 'IS');
+
+  $total = (int) $query->countQuery()->execute()->fetchField();
   $results = $query->execute();
+  $completed = 0;
+
+  print "Starting alchemist job. There are $total entities to convert\n";
 
   while ($result = $results->fetchObject()) {
     $record_id = $result->record_id;
@@ -188,6 +193,12 @@ function tripal_alchemist_convert_all(
         FALSE);
       $entity = reset($entities);
       module_invoke_all('entity_update', $entity, $entity->type);
+    }
+
+    $completed++;
+
+    if ($completed % 500) {
+      print "Completed $completed / $total\n";
     }
   }
 }
