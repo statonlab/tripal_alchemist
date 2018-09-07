@@ -197,7 +197,7 @@ function tripal_alchemist_convert_all(
 
     $completed++;
 
-    if ($completed % 500) {
+    if (($completed % 500) === 0) {
       print "Completed $completed / $total\n";
     }
   }
