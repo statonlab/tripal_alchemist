@@ -164,6 +164,13 @@ function tripal_alchemist_converter_form($form, &$form_state) {
       '#type' => 'markup',
       '#markup' => $markup,
     ];
+
+    if ($count == 0){
+      $form['div1']['nope'] = [
+        '#markup' => '<p>No qualifying records.  Please select a different Source/Destination bundle combination.</p>'
+      ];
+      return $form;
+    }
   }
 
   //if manual, we're going to do instead build a checkbox table
