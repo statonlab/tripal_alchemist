@@ -501,10 +501,9 @@ function tripal_alchemist_delete_orphaned_entities($bundle_id) {
   $schema = chado_get_schema($chado_table);
   $primary_key = is_array($schema) ? $schema['primary key'][0] : NULL;
 
-  $count = (int) db_query('SELECT count(entity_id) FROM ' . $bundle_table . ' BT
-                  WHERE BT.record_id NOT IN (
-                          SELECT ' . $primary_key . ' FROM chado.' . $chado_table . '
-                )')->fetchField();
+  $count = (int) db_query('SELECT count(*) FROM ' . $bundle_table . ' BT
+                        LEFT JOIN chado.' . $chado_table . ' CT ON BT.record_id = CT.' . $primary_key . '
+                        WHERE CT.' . $primary_key . ' IS NULL')->fetchField();
 
   if ($count === 0) {
     print "Unable to find any orphaned entities.\n";
@@ -520,9 +519,8 @@ function tripal_alchemist_delete_orphaned_entities($bundle_id) {
   for ($i = 0; $i < $count; $i += $chunk) {
     // Get a chunk of orphaned entities
     $entities = db_query('SELECT entity_id FROM ' . $bundle_table . ' BT
-                  WHERE BT.record_id NOT IN (
-                          SELECT ' . $primary_key . ' FROM chado.' . $chado_table . '
-                ) ORDER BY entity_id desc
+                        LEFT JOIN chado.' . $chado_table . ' CT ON BT.record_id = CT.' . $primary_key . '
+                        WHERE CT.' . $primary_key . ' IS NULL ORDER BY entity_id desc
                   OFFSET :offset
                   LIMIT :limit', [
       ':offset' => $i,
