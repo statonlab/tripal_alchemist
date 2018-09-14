@@ -32,6 +32,11 @@ function tripal_alchemist_unpublish_form($form, &$form_state) {
 
   $form['bundle_info_fieldset'] = [
     '#type' => 'fieldset',
+    '#states' => [
+      'invisible' => [
+        'select[name="bundles"]' => ['value' => ''],
+      ],
+    ],
     '#collapsible' => FALSE,
     '#prefix' => '<div id="bundle_info_fieldset_wrapper">',
     '#suffix' => '</div>',
@@ -40,9 +45,10 @@ function tripal_alchemist_unpublish_form($form, &$form_state) {
   $selected_bundle_id = isset($form_state['values']['bundles']) ? $form_state['values']['bundles'] : NULL;
   if ($selected_bundle_id) {
     $count = tripal_alchemist_get_orphaned_counts_for_bundle($selected_bundle_id);
+    $name = $bundles[$selected_bundle_id];
     $form['bundle_info_fieldset']['message'] = [
       '#type' => 'markup',
-      '#markup' => t('<p><strong>There are ' . $count . ' orphaned entities in this bundle.</strong></p>'),
+      '#markup' => t('<p><strong>There are ' . $count . ' orphaned entities in the '.$name.' bundle.</strong></p>'),
     ];
 
     if ($count > 0) {
@@ -127,8 +133,8 @@ function tripal_alchemist_get_orphaned_counts_for_bundle($bundle_id) {
   // Get the count
   if ($primary_key) {
     $count = db_query('SELECT count(*) FROM ' . $bundle_table . ' BT
-                        LEFT JOIN chado.'.$chado_table.' CT ON BT.record_id = CT.'.$primary_key.'
-                        WHERE CT.'.$primary_key.' IS NULL')->fetchField();
+                        LEFT JOIN chado.' . $chado_table . ' CT ON BT.record_id = CT.' . $primary_key . '
+                        WHERE CT.' . $primary_key . ' IS NULL')->fetchField();
   }
 
   return (int) $count;
