@@ -127,9 +127,8 @@ function tripal_alchemist_get_orphaned_counts_for_bundle($bundle_id) {
   // Get the count
   if ($primary_key) {
     $count = db_query('SELECT count(*) FROM ' . $bundle_table . ' BT
-                        WHERE BT.record_id NOT IN (
-                          SELECT ' . $primary_key . ' FROM chado.' . $chado_table . '
-                        )')->fetchField();
+                        LEFT JOIN chado.'.$chado_table.' CT ON BT.record_id = CT.'.$primary_key.'
+                        WHERE CT.'.$primary_key.' IS NULL')->fetchField();
   }
 
   return (int) $count;
