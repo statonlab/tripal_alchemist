@@ -32,6 +32,7 @@ function tripal_alchemist_unpublish_form($form, &$form_state) {
 
   $form['bundle_info_fieldset'] = [
     '#type' => 'fieldset',
+    '#title' => 'Search Results',
     '#states' => [
       'invisible' => [
         'select[name="bundles"]' => ['value' => ''],
@@ -48,10 +49,16 @@ function tripal_alchemist_unpublish_form($form, &$form_state) {
     $name = $bundles[$selected_bundle_id];
     $form['bundle_info_fieldset']['message'] = [
       '#type' => 'markup',
-      '#markup' => t('<p><strong>There are ' . $count . ' orphaned entities in the '.$name.' bundle.</strong></p>'),
+      '#markup' => t('<p><strong>There are ' . $count . ' orphaned entities in the ' . $name . ' bundle.</strong></p>'),
     ];
 
     if ($count > 0) {
+      $form['bundle_info_fieldset']['example_table'] = [
+        '#type' => 'markup',
+        '#prefix' => t('<p>The following is an example of the records that will get removed. This table contains a maximum of 10 records.</p>'),
+        '#markup' => tripal_alchemist_missing_records_table($selected_bundle_id),
+      ];
+
       $form['bundle_info_fieldset']['submit'] = [
         '#type' => 'submit',
         '#value' => 'Permanently Delete Orphaned Entities',
@@ -140,6 +147,49 @@ function tripal_alchemist_get_orphaned_counts_for_bundle($bundle_id) {
   return (int) $count;
 }
 
+/**
+ * Ajax callback for this form.
+ *
+ * @param array $form
+ *
+ * @return array
+ */
 function tripal_alchemist_unpublish_form_callback($form) {
   return $form['bundle_info_fieldset'];
+}
+
+function tripal_alchemist_missing_records_table($bundle_id) {
+  // Get the bundle
+  $bundle = db_query('SELECT bundle_id, data_table, label 
+             FROM chado_bundle CB
+             INNER JOIN tripal_bundle TB ON TB.id = CB.bundle_id
+             WHERE bundle_id = :id', [':id' => $bundle_id])->fetchObject();
+
+  $bundle_table = db_escape_table("chado_bio_data_{$bundle->bundle_id}");
+  $chado_table = db_escape_table($bundle->data_table);
+  $schema = chado_get_schema($chado_table);
+  $primary_key = is_array($schema) ? $schema['primary key'][0] : NULL;
+
+  $entities = db_query('SELECT TE.title, TE.id, BT.record_id FROM ' . $bundle_table . ' BT
+                        LEFT JOIN chado.' . $chado_table . ' CT ON BT.record_id = CT.' . $primary_key . '
+                        LEFT JOIN tripal_entity TE ON TE.id = BT.entity_id
+                        WHERE CT.' . $primary_key . ' IS NULL
+                        ORDER BY BT.entity_id ASC')->fetchAll();
+
+  return theme('table', [
+    'header' => [
+      'Entity ID',
+      'Title',
+      'Chado Table',
+      str_replace('_', ' ', $primary_key),
+    ],
+    'rows' => array_map(function ($entity) use ($chado_table) {
+      return [
+        $entity->id,
+        $entity->title,
+        $chado_table,
+        $entity->record_id,
+      ];
+    }, $entities),
+  ]);
 }
