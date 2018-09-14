@@ -174,7 +174,8 @@ function tripal_alchemist_missing_records_table($bundle_id) {
                         LEFT JOIN chado.' . $chado_table . ' CT ON BT.record_id = CT.' . $primary_key . '
                         LEFT JOIN tripal_entity TE ON TE.id = BT.entity_id
                         WHERE CT.' . $primary_key . ' IS NULL
-                        ORDER BY BT.entity_id ASC')->fetchAll();
+                        ORDER BY BT.entity_id ASC
+                        LIMIT 10')->fetchAll();
 
   return theme('table', [
     'header' => [
