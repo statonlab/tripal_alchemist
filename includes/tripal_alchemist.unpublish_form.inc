@@ -96,6 +96,8 @@ function tripal_alchemist_unpublish_form_submit($form, &$form_state) {
     'tripal_alchemist_delete_orphaned_entities', [$bundle_id], $user->uid, 10);
 
   drupal_set_message('Job submitted successfully!');
+  drupal_set_message('WARNING: It is expected to see a few tripal_chado errors
+   while the job is executing. The errors can be safely ignored.', 'warning');
 }
 
 /**
