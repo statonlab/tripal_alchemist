@@ -522,7 +522,6 @@ function tripal_alchemist_delete_orphaned_entities($bundle_id) {
                           LEFT JOIN chado.' . $chado_table . ' CT ON BT.record_id = CT.' . $primary_key . '
                           WHERE CT.' . $primary_key . ' IS NULL ORDER BY entity_id desc
                           LIMIT :limit', [
-      ':offset' => $i,
       ':limit' => $chunk,
     ])->fetchAll();
 
