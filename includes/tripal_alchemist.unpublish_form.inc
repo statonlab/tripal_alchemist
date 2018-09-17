@@ -187,7 +187,7 @@ function tripal_alchemist_missing_records_table($bundle_id) {
     'rows' => array_map(function ($entity) use ($chado_table) {
       return [
         $entity->id,
-        $entity->title,
+        l($entity->title, 'bio_data/'.$entity->id),
         $chado_table,
         $entity->record_id,
       ];
