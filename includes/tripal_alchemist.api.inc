@@ -520,7 +520,8 @@ function tripal_alchemist_delete_orphaned_entities($bundle_id) {
     // Get a chunk of orphaned entities
     $entities = db_query('SELECT entity_id FROM ' . $bundle_table . ' BT
                           LEFT JOIN chado.' . $chado_table . ' CT ON BT.record_id = CT.' . $primary_key . '
-                          WHERE CT.' . $primary_key . ' IS NULL ORDER BY entity_id desc
+                          WHERE CT.' . $primary_key . ' IS NULL 
+                          ORDER BY entity_id desc
                           LIMIT :limit', [
       ':limit' => $chunk,
     ])->fetchAll();
