@@ -483,3 +483,74 @@ function tripal_alchemist_get_eligible_entities($collection, $source_bundle) {
 
   return $matching_entities;
 }
+
+/**
+ * Job callback to perform deletion of orphaned entities.
+ *
+ * @param int $bundle_id
+ *
+ * @throws \Exception
+ */
+function tripal_alchemist_delete_orphaned_entities($bundle_id) {
+  $bundle = db_query('SELECT bundle_id, data_table 
+             FROM chado_bundle CB WHERE bundle_id = :id',
+    [':id' => $bundle_id])->fetchObject();
+
+  $bundle_table = db_escape_table("chado_bio_data_{$bundle->bundle_id}");
+  $chado_table = db_escape_table($bundle->data_table);
+  $schema = chado_get_schema($chado_table);
+  $primary_key = is_array($schema) ? $schema['primary key'][0] : NULL;
+
+  $count = (int) db_query('SELECT count(*) FROM ' . $bundle_table . ' BT
+                        LEFT JOIN chado.' . $chado_table . ' CT ON BT.record_id = CT.' . $primary_key . '
+                        WHERE CT.' . $primary_key . ' IS NULL')->fetchField();
+
+  if ($count === 0) {
+    print "Unable to find any orphaned entities.\n";
+    return;
+  }
+
+  print "Found $count orphaned entities.\n";
+
+  $chunk = 500;
+  $progress = 0;
+  print "Progress: {$progress}%; Memory: " . number_format(memory_get_usage()) . " bytes\r\033[K";
+
+  for ($i = 0; $i < $count; $i += $chunk) {
+    // Get a chunk of orphaned entities
+    $entities = db_query('SELECT entity_id FROM ' . $bundle_table . ' BT
+                          LEFT JOIN chado.' . $chado_table . ' CT ON BT.record_id = CT.' . $primary_key . '
+                          WHERE CT.' . $primary_key . ' IS NULL 
+                          ORDER BY entity_id desc
+                          LIMIT :limit', [
+      ':limit' => $chunk,
+    ])->fetchAll();
+
+    $ids = array_map(function ($entity) {
+      return (int) $entity->entity_id;
+    }, $entities);
+
+    if (empty($ids)) {
+      throw new Exception('Unable to find selected entities while attempting to delete orphaned entities.');
+    }
+
+    // This will trigger all needed hooks
+    /** @var \TripalEntityController $controller */
+    $controller = entity_get_controller('TripalEntity');
+    if ($controller->delete($ids) === FALSE) {
+      print "\nFailed to delete chunk {$i}/{$count}!\n";
+    }
+
+    // TODO: this is a temporary solution until the following issue is resolved
+    // TODO: https://github.com/tripal/tripal/issues/652
+    db_query('DELETE FROM chado_bio_data_' . $bundle_id . ' 
+              WHERE entity_id IN (:ids)', [':ids' => $ids]);
+
+    // Report progress
+    $progress = number_format(($i + $chunk) / $count * 100, 2);
+    print "Progress: {$progress}%; Memory: " . number_format(memory_get_usage()) . " bytes\r\033[K";
+  }
+
+  print "Progress: 100%; Memory: " . number_format(memory_get_usage()) . " bytes\n";
+  print "Done.\n";
+}

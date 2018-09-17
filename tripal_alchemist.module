@@ -1,6 +1,6 @@
 <?php
 
-include_once('includes/tripal_alchemist.api.inc');
+require_once 'includes/tripal_alchemist.api.inc';
 
 /**
  * implement hook menu
@@ -11,21 +11,28 @@ function tripal_alchemist_menu() {
 
   $items[$admin_url_base] = [
     'title' => 'Tripal Alchemist',
-    'description' => t('Tripal Alchemist: Convert Tripal 3 Entities'),
-    'access arguments' => [' tripal alchemist'],
+    'description' => t('Tripal Alchemist: Manage Tripal 3 Entities'),
+    'access arguments' => ['tripal alchemist'],
+    'page callback' => 'tripal_alchemist_admin_index_page',
+  ];
+
+  $items[$admin_url_base . '/converter_form'] = [
+    'title' => 'Convert Entity Types',
+    'description' => t('Convert Tripal 3 Entities'),
+    'access arguments' => ['administer tripal'],
     'page callback' => 'drupal_get_form',
     'page arguments' => ['tripal_alchemist_converter_form'],
     'file' => 'includes/tripal_alchemist_converter.form.inc',
     'file_path' => drupal_get_path('module', 'tripal_alchemist'),
   ];
 
-  $items[$admin_url_base . "/entity_converter"] = [
-    'title' => 'Tripal Alchemist',
-    'description' => t('Tripal Alchemist: Convert Tripal 3 Entities'),
-    'access arguments' => [' tripal alchemist'],
+  $items[$admin_url_base . "/unpublish_form"] = [
+    'title' => 'Delete Orphaned Entities',
+    'description' => t('Unpublish entities that have no associated records in their corresponding chado tables'),
+    'access arguments' => ['administer tripal'],
     'page callback' => 'drupal_get_form',
-    'page arguments' => ['tripal_alchemist_converter_form'],
-    'file' => 'includes/tripal_alchemist_converter.form.inc',
+    'page arguments' => ['tripal_alchemist_unpublish_form'],
+    'file' => 'includes/tripal_alchemist.unpublish_form.inc',
     'file_path' => drupal_get_path('module', 'tripal_alchemist'),
   ];
 
@@ -43,4 +50,30 @@ function tripal_alchemist_cron_queue_info() {
   ];
 
   return $queues;
+}
+
+/**
+ * Tripal Alchemist admin index page.
+ *
+ * Lists all links in the main menu.
+ *
+ * @return string
+ */
+function tripal_alchemist_admin_index_page() {
+  $items = tripal_alchemist_menu();
+
+  // Exclude the first page
+  $admin_url_base = 'admin/tripal/extension/tripal_alchemist';
+  unset($items[$admin_url_base]);
+
+  $list = '';
+  foreach ($items as $url => $item) {
+    $list .= '<p><strong>';
+    $list .= l($item['title'] ?: 'missing title', $url);
+    $list .= '</strong></p>';
+    $list .= '<p>' . $item['description'] ?: '' . '</p>';
+    $list .= '<hr>';
+  }
+
+  return $list;
 }
