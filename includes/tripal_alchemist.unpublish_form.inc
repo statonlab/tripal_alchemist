@@ -23,7 +23,7 @@ function tripal_alchemist_unpublish_form($form, &$form_state) {
     '#type' => 'select',
     '#options' => $bundles,
     '#empty_option' => t('-- Select a Bundle --'),
-    '#description' => t('Bundles that have entities with no associated chado records are listed above.'),
+    '#description' => t('Select a bundle to check if it has orphaned entities.'),
     '#ajax' => [
       'callback' => 'tripal_alchemist_unpublish_form_callback',
       'wrapper' => 'bundle_info_fieldset_wrapper',
