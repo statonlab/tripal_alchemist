@@ -6,7 +6,6 @@ use StatonLab\TripalTestSuite\DBTransaction;
 use StatonLab\TripalTestSuite\TripalTestCase;
 
 
-
 class tripal_alchemist_APITest extends TripalTestCase {
 
   use DBTransaction;
@@ -103,7 +102,12 @@ class tripal_alchemist_APITest extends TripalTestCase {
     //Confirm the type_id changed in Chado.
     $this->assertEquals($mrna->type_id, $result->type_id);
 
-    //TODO: Confirm the entity moved.
+
+    $record = chado_get_record_entity_by_bundle($mrna_bundle, $gene->feature_id);
+    $this->assertNotFalse($record);
+
+    $record = chado_get_record_entity_by_bundle($gene_bundle, $gene->feature_id);
+    $this->assertFalse($record);
   }
 
 
@@ -147,8 +151,9 @@ class tripal_alchemist_APITest extends TripalTestCase {
     ];
 
 
-
     module_load_include('tripal', 'inc', 'includes/TripalFieldDownloaders/TripalTabDownloader');
+
+    module_load_include('tripal', 'inc', 'includes/TripalFieldDownloaders/TripalCSVDownloader');
 
 
     $tec = tripal_create_collection($collection_details);
@@ -156,7 +161,7 @@ class tripal_alchemist_APITest extends TripalTestCase {
     $source = $gene_bundle;
     $destination = $mrna_bundle;
     $source_entities = [];
-  //  $collection = $tec_id;
+    //  $collection = $tec_id;
 
 
     tripal_alchemist_convert_select_entities($source, $destination, $source_entities, $tec);
@@ -172,7 +177,12 @@ class tripal_alchemist_APITest extends TripalTestCase {
     //Confirm the type_id changed in Chado.
     $this->assertEquals($mrna->type_id, $result->type_id);
 
-    //TODO: confirm entity moved
+    $record = chado_get_record_entity_by_bundle($mrna_bundle, $gene->feature_id);
+    $this->assertNotFalse($record);
+
+    $record = chado_get_record_entity_by_bundle($gene_bundle, $gene->feature_id);
+    $this->assertFalse($record);
+
   }
 
 }

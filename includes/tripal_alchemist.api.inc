@@ -322,7 +322,6 @@ function tripal_alchemist_convert_select_entities(
   }
 
   $total_count = count($source_entities);
-  // TODO:  THIS WILL FAIL IF TOO MANY ENTITIES.
 
   print("\n Preparing to convert " . $total_count . " entities from " . $source_bundle->label . "  to the bundle: " . $destination_bundle->label . "\n");
   //get all our source and destination table info
