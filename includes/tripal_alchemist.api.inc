@@ -526,20 +526,29 @@ function tripal_alchemist_delete_orphaned_entities($bundle_id) {
       ':limit' => $chunk,
     ])->fetchAll();
 
+    // Extract entity ids
     $ids = array_map(function ($entity) {
       return (int) $entity->entity_id;
     }, $entities);
 
+    // Tell the user that selected entities are not present
     if (empty($ids)) {
-      throw new Exception('Unable to find selected entities while attempting to delete orphaned entities.');
+      tripal_report_error('tripal_alchemist', TRIPAL_ERROR,
+        'Unable to find selected entities while attempting to delete orphaned entities.');
+      continue;
     }
 
     // This will trigger all needed hooks
     /** @var \TripalEntityController $controller */
+    ob_start(function($buffer) {
+      unset($buffer);
+    });
     $controller = entity_get_controller('TripalEntity');
     if ($controller->delete($ids) === FALSE) {
       print "\nFailed to delete chunk {$i}/{$count}!\n";
     }
+    $controller->resetCache($ids);
+    ob_end_clean();
 
     // TODO: this is a temporary solution until the following issue is resolved
     // TODO: https://github.com/tripal/tripal/issues/652
