@@ -512,9 +512,10 @@ function tripal_alchemist_delete_orphaned_entities($bundle_id) {
 
   print "Found $count orphaned entities.\n";
 
-  $chunk = 500;
+  //$chunk = 500;
+  $chunk = 1;
   $progress = 0;
-  print "Progress: {$progress}%; Memory: " . number_format(memory_get_usage()) . " bytes\r\033[K";
+  print "Progress: {$progress}%; Memory: " . number_format(memory_get_usage()) . " bytes\r";
 
   for ($i = 0; $i < $count; $i += $chunk) {
     // Get a chunk of orphaned entities
@@ -526,20 +527,31 @@ function tripal_alchemist_delete_orphaned_entities($bundle_id) {
       ':limit' => $chunk,
     ])->fetchAll();
 
+    // Extract entity ids
     $ids = array_map(function ($entity) {
       return (int) $entity->entity_id;
     }, $entities);
 
+    // Tell the user that selected entities are not present
     if (empty($ids)) {
-      throw new Exception('Unable to find selected entities while attempting to delete orphaned entities.');
+      tripal_report_error('tripal_alchemist', TRIPAL_ERROR,
+        'Unable to find selected entities while attempting to delete orphaned entities.');
+      continue;
     }
 
     // This will trigger all needed hooks
     /** @var \TripalEntityController $controller */
+    ob_start(function($buffer) {
+      unset($buffer);
+    });
+    putenv('TRIPAL_SUPPRESS_ERRORS=true');
     $controller = entity_get_controller('TripalEntity');
     if ($controller->delete($ids) === FALSE) {
       print "\nFailed to delete chunk {$i}/{$count}!\n";
     }
+    $controller->resetCache($ids);
+    putenv('TRIPAL_SUPPRESS_ERRORS=false');
+    ob_end_clean();
 
     // TODO: this is a temporary solution until the following issue is resolved
     // TODO: https://github.com/tripal/tripal/issues/652
@@ -548,7 +560,7 @@ function tripal_alchemist_delete_orphaned_entities($bundle_id) {
 
     // Report progress
     $progress = number_format(($i + $chunk) / $count * 100, 2);
-    print "Progress: {$progress}%; Memory: " . number_format(memory_get_usage()) . " bytes\r\033[K";
+    print "Progress: {$progress}%; Memory: " . number_format(memory_get_usage()) . " bytes\r";
   }
 
   print "Progress: 100%; Memory: " . number_format(memory_get_usage()) . " bytes\n";
