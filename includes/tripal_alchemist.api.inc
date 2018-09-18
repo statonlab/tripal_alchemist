@@ -512,8 +512,7 @@ function tripal_alchemist_delete_orphaned_entities($bundle_id) {
 
   print "Found $count orphaned entities.\n";
 
-  //$chunk = 500;
-  $chunk = 1;
+  $chunk = 500;
   $progress = 0;
   print "Progress: {$progress}%; Memory: " . number_format(memory_get_usage()) . " bytes\r";
 
