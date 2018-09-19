@@ -55,10 +55,12 @@ class tripal_alchemist_APITest extends TripalTestCase {
   }
 
   /**
+   * @ticket 18
    * @group api
    * @group form
    */
   public function test_alchemist_build_transaction_table() {
+
 
     $this->create_automatic_entities();
     $gene_bundle = tripal_load_bundle_entity(['accession' => 'SO:0000704']);
@@ -66,13 +68,16 @@ class tripal_alchemist_APITest extends TripalTestCase {
 
     $table = tripal_alchemist_build_transaction_table($gene_bundle, $mrna_bundle);
 
-    $this->assertGreaterThan(0, $table['count']);
+    $count = $table['count'];
+    $this->assertEquals(1, $count);
     $table = $table['table'];
 
     $this->assertNotEmpty($table);
     $this->assertArrayHasKey('header', $table);
     $this->assertArrayHasKey('rows', $table);
     $this->assertNotEmpty($table['rows']);
+
+    $this->assertEquals($count, count($table['rows']));
   }
 
 
@@ -197,7 +202,8 @@ class tripal_alchemist_APITest extends TripalTestCase {
       ->countQuery()
       ->execute()->fetchField();
 
-    $genes = factory('chado.feature', 10000)->create(['type_id' => $gene_term->cvterm_id]);
+    //increase this number ot stress test
+    $genes = factory('chado.feature', 10)->create(['type_id' => $gene_term->cvterm_id]);
     $this->publish('feature');
 
     $gene_bundle = tripal_load_bundle_entity(['accession' => 'SO:0000704']);
