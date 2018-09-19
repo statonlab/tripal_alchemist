@@ -113,7 +113,6 @@ class tripal_alchemist_APITest extends TripalTestCase {
 
   /**
    *
-   * @group wip
    */
   public function test_tripal_alchemist_convert_select_entities_collection() {
 
@@ -182,6 +181,79 @@ class tripal_alchemist_APITest extends TripalTestCase {
 
     $record = chado_get_record_entity_by_bundle($gene_bundle, $gene->feature_id);
     $this->assertFalse($record);
+
+  }
+
+  /**
+   * @group wip
+   */
+  public function test_tripal_alchemist_stress_test_convert_collection(){
+
+    $gene_term = chado_get_cvterm(['id' => 'SO:0000704']);
+
+    $start_count = db_select('chado.feature', 'f')
+      ->fields('f', ['feature_id'])
+      ->condition('type_id', $gene_term->cvterm_id)
+      ->countQuery()
+      ->execute()->fetchField();
+
+    $genes = factory('chado.feature', 10000)->create(['type_id' => $gene_term->cvterm_id]);
+    $this->publish('feature');
+
+    $gene_bundle = tripal_load_bundle_entity(['accession' => 'SO:0000704']);
+    $mrna_bundle = tripal_load_bundle_entity(['accession' => 'SO:0000234']);
+
+    $table = 'chado_' . $gene_bundle->name;
+
+    $results = db_select($table, 't')
+      ->fields('t', ['entity_id'])
+      ->execute()
+      ->fetchAll();
+
+    $eids = [];
+    foreach ($results as $result){
+      $eids[] = $result->entity_id;
+    }
+
+    $this->actingAs(1);
+
+    global $user;
+
+    $fields = field_info_instances('TripalEntity', $gene_bundle->name);
+
+    $field_ids = [];
+
+    foreach ($fields as $field) {
+      $field_ids[] = $field['id'];
+    }
+    $collection_details = [
+      'uid' => $user->uid,
+      'collection_name' => 'alchemist_test_collection_PHPUNIT',
+      'bundle_name' => $gene_bundle->name,
+      'ids' => $eids,
+      'description' => NULL,
+      'fields' => $field_ids,
+    ];
+
+
+    module_load_include('tripal', 'inc', 'includes/TripalFieldDownloaders/TripalTabDownloader');
+    module_load_include('tripal', 'inc', 'includes/TripalFieldDownloaders/TripalCSVDownloader');
+
+    $tec = tripal_create_collection($collection_details);
+    $source = $gene_bundle;
+    $destination = $mrna_bundle;
+    $source_entities = [];
+
+    tripal_alchemist_convert_select_entities($source, $destination, $source_entities, $tec);
+
+
+    $end_count = db_select('chado.feature', 'f')
+      ->fields('f', ['feature_id'])
+      ->condition('type_id', $gene_term->cvterm_id)
+      ->countQuery()
+      ->execute()->fetchField();
+
+    $this->assertEquals($start_count, $end_count);
 
   }
 
