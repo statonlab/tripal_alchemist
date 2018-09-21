@@ -322,7 +322,6 @@ function tripal_alchemist_convert_select_entities(
   }
 
   $total_count = count($source_entities);
-  // TODO:  THIS WILL FAIL IF TOO MANY ENTITIES.
 
   print("\n Preparing to convert " . $total_count . " entities from " . $source_bundle->label . "  to the bundle: " . $destination_bundle->label . "\n");
   //get all our source and destination table info
@@ -564,4 +563,110 @@ function tripal_alchemist_delete_orphaned_entities($bundle_id) {
 
   print "Progress: 100%; Memory: " . number_format(memory_get_usage()) . " bytes\n";
   print "Done.\n";
+}
+
+
+
+
+/**
+ * Builds a table to display the entities that will be converted given the
+ * source and destination bundle.
+ *
+ * @param $source_bundle
+ * @param $destination_bundle
+ *
+ * @return array|null
+ *
+ * @ingroup Tripal_Alchemist_Form
+ */
+function tripal_alchemist_build_transaction_table(
+  $source_bundle,
+  $destination_bundle
+) {
+
+  $result_count = 0;
+  $result_count = 0;
+
+  // What we want to do is a) Pull all the **source**  bundle entities
+  // and look at how many of those qualify for the destination bundle.
+  $source_table = "chado." . $source_bundle->data_table;//CBT  CHADO BASE TABLE
+  $source_entity_table = "public.chado_" . $source_bundle->name; //SET SOURCE ENTITY TABLE
+  $destination_entity_table = "public.chado_" . $destination_bundle->name;
+  $type_column = $destination_bundle->type_column;
+  $type_id = $destination_bundle->type_id;
+  $type_value = $destination_bundle->type_value;
+
+  $type_linker_table = NULL;
+
+  if (!$destination_bundle->type_linker_table && $destination_bundle->type_column) {
+    //this is a type_id column situation, not a linker table situation
+    $query = db_select($source_table, 'CBT');
+    $query->fields('SET', ['record_id', 'entity_id']);
+    $query->fields('CBT', ['name']);
+    $query->innerJoin($source_entity_table, 'SET',
+      'SET.record_id = CBT.' . $source_bundle->data_table . '_id');
+    $query->leftJoin($destination_entity_table, 'DET',
+      'SET.record_id = DET.record_id');
+    $query->condition('CBT.' . $type_column, $type_id);
+    $query->condition('DET.record_id', NULL, 'IS');
+    $count_query = $query;
+
+    $result_count = $count_query->countQuery()->execute()->fetchField();
+
+    $results = $query->range(0, 10)->execute()->fetchAll();
+  }
+  elseif ($destination_bundle->type_linker_table && $destination_bundle->type_column && $destination_bundle->type_value) {
+    //This is a linker table type transmutation
+    $type_linker_table = "chado." . $destination_bundle->type_linker_table; //CLT CHADO LINKER TABLE
+
+    //TODO:  Joining on the data_table_id is risky.  This works for analysis but which ones does it fail on?
+    //note: I could use the get_schema() to figure out the primary key
+    //TODO:  CBT.name: is this fair?  What can I get that's relaiably human readable?
+    $query = db_select($source_table, 'CBT');
+    $query->fields('SET', ['record_id', 'entity_id']);
+    $query->fields('CBT', ['name']);
+    $query->innerJoin($source_entity_table, 'SET',
+      'SET.record_id = CBT.' . $source_bundle->data_table . '_id');
+    $query->innerJoin($type_linker_table, 'CLT',
+      'CBT.' . $source_bundle->data_table . '_id = CLT.' . $source_bundle->data_table . '_id');
+    $query->leftJoin($destination_entity_table, 'DET',
+      'SET.record_id = DET.record_id');
+    $query->condition('CLT.' . $type_column, $type_id);
+    $query->condition('CLT.value', $type_value);
+    $query->condition('DET.record_id', NULL, 'IS');
+    $count_query = $query;
+
+    $result_count = $count_query->countQuery()->execute()->fetchField();
+
+    $results = $query->range(0, 10)->execute()->fetchAll();
+  }
+  else {
+    tripal_set_message("destination bundle is not properly set.", TRIPAL_ERROR);
+    return ['table' => NULL, 'count' => $result_count];
+  }
+
+  $rows = [];
+
+  $overflow = FALSE;
+
+  if ($result_count === 0) {
+    return ['table' => NULL, 'count' => $result_count];
+  }
+
+  foreach ($results as $result) {
+    $rows[] = [
+      $result->record_id,
+      $result->entity_id,
+      $result->name,
+    ];
+  }
+
+  $headers = ['Record ID', 'Entity ID', 'Name'];
+
+  $table = [
+    'header' => $headers,
+    'rows' => $rows,
+  ];
+
+  return ['table' => $table, 'count' => $result_count];
 }
